@@ -6,7 +6,8 @@ import arcade
 from ..ecs import World
 from ..ecs.systems import (
     RenderSystem, MovementSystem, CollisionSystem,
-    HealthSystem, SunSystem, WaveSystem
+    HealthSystem, SunSystem, WaveSystem,
+    PlantBehaviorSystem, ProjectileSystem, ZombieBehaviorSystem
 )
 from .entity_factory import EntityFactory
 from .planting_system import PlantingSystem
@@ -71,12 +72,24 @@ class GameWindow(arcade.Window):
         self.health_system = HealthSystem(priority=30)
         self.world.add_system(self.health_system)
         
+        # 投射物系统
+        self.projectile_system = ProjectileSystem(self.world._entity_manager, priority=35)
+        self.world.add_system(self.projectile_system)
+        
+        # 植物行为系统
+        self.plant_behavior_system = PlantBehaviorSystem(self.entity_factory, priority=40)
+        self.world.add_system(self.plant_behavior_system)
+        
+        # 僵尸行为系统
+        self.zombie_behavior_system = ZombieBehaviorSystem(priority=45)
+        self.world.add_system(self.zombie_behavior_system)
+        
         # 阳光系统
-        self.sun_system = SunSystem(priority=40)
+        self.sun_system = SunSystem(priority=50)
         self.world.add_system(self.sun_system)
         
         # 波次系统
-        self.wave_system = WaveSystem(self.current_level, priority=50)
+        self.wave_system = WaveSystem(self.current_level, priority=60)
         self.world.add_system(self.wave_system)
     
     def on_update(self, delta_time: float):
