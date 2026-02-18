@@ -8,6 +8,8 @@ from ..ecs.systems import (
     RenderSystem, MovementSystem, CollisionSystem,
     HealthSystem, SunSystem, WaveSystem
 )
+from .entity_factory import EntityFactory
+from .planting_system import PlantingSystem
 
 
 class GameWindow(arcade.Window):
@@ -34,6 +36,12 @@ class GameWindow(arcade.Window):
         
         # 初始化系统
         self._init_systems()
+        
+        # 创建实体工厂
+        self.entity_factory = EntityFactory(self.world)
+        
+        # 创建种植系统
+        self.planting_system = PlantingSystem(self.world, self.entity_factory)
         
         # 游戏状态
         self.sun_count = 50
@@ -79,6 +87,9 @@ class GameWindow(arcade.Window):
         # 更新ECS世界
         self.world.update(delta_time)
         
+        # 更新种植系统
+        self.planting_system.update(delta_time, self.sun_count)
+        
         # 检查游戏结束条件
         self._check_game_over()
     
@@ -94,6 +105,9 @@ class GameWindow(arcade.Window):
         
         # 渲染UI
         self._draw_ui()
+        
+        # 渲染种植系统
+        self.planting_system.render()
         
         # 渲染游戏结束/胜利画面
         if self.game_over:
@@ -235,12 +249,18 @@ class GameWindow(arcade.Window):
         if self.game_over or self.victory:
             return
         
-        # 处理种植、收集阳光等
-        pass
+        # 处理种植
+        if self.planting_system.handle_mouse_press(x, y, self.sun_count):
+            # 消耗阳光
+            cost = self.planting_system.get_planting_cost()
+            if cost > 0:
+                self.spend_sun(cost)
+            return
     
     def reset_game(self):
         """重置游戏"""
         self.world.clear()
+        self.planting_system.clear()
         self.sun_count = 50
         self.score = 0
         self.game_over = False
