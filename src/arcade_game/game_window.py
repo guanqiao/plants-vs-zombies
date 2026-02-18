@@ -14,6 +14,7 @@ from .planting_system import PlantingSystem
 from .zombie_spawner import ZombieSpawner
 from .sun_collection_system import SunCollectionSystem
 from .audio_manager import get_audio_manager
+from .particle_system import ParticleSystem
 
 
 class GameWindow(arcade.Window):
@@ -57,6 +58,9 @@ class GameWindow(arcade.Window):
         
         # 获取音效管理器
         self.audio_manager = get_audio_manager()
+        
+        # 创建粒子系统
+        self.particle_system = ParticleSystem()
         
         # 注册僵尸死亡回调
         self.zombie_behavior_system.register_death_callback(self._on_zombie_death)
@@ -126,6 +130,9 @@ class GameWindow(arcade.Window):
         # 更新阳光收集系统
         self.sun_collection_system.update(delta_time)
         
+        # 更新粒子系统
+        self.particle_system.update(delta_time)
+        
         # 检查游戏结束条件
         self._check_game_over()
     
@@ -147,6 +154,9 @@ class GameWindow(arcade.Window):
         
         # 渲染阳光
         self.sun_collection_system.render_suns()
+        
+        # 渲染粒子效果
+        self.particle_system.render()
         
         # 渲染游戏结束/胜利画面
         if self.game_over:
@@ -278,6 +288,13 @@ class GameWindow(arcade.Window):
         self.add_score(score_value)
         # 播放僵尸死亡音效
         self.audio_manager.play_zombie_death_sound()
+        # 创建僵尸死亡粒子效果
+        from ..ecs.components import TransformComponent
+        zombie_entity = self.world.get_entity(zombie_id)
+        if zombie_entity:
+            transform = self.world.get_component(zombie_entity, TransformComponent)
+            if transform:
+                self.particle_system.create_zombie_death_effect(transform.x, transform.y)
     
     def _on_sun_collected(self, amount: int):
         """阳光收集回调"""
@@ -306,12 +323,16 @@ class GameWindow(arcade.Window):
         if self.sun_collection_system.handle_mouse_press(x, y):
             # 播放收集音效
             self.audio_manager.play_collect_sun_sound()
+            # 创建收集粒子效果
+            self.particle_system.create_collect_effect(x, y)
             return
         
         # 处理种植
         if self.planting_system.handle_mouse_press(x, y, self.sun_count):
             # 播放种植音效
             self.audio_manager.play_plant_sound()
+            # 创建种植粒子效果
+            self.particle_system.create_plant_effect(x, y)
             # 消耗阳光
             cost = self.planting_system.get_planting_cost()
             if cost > 0:
@@ -324,6 +345,7 @@ class GameWindow(arcade.Window):
         self.planting_system.clear()
         self.zombie_spawner.reset()
         self.sun_collection_system.reset()
+        self.particle_system.clear()
         self.sun_count = 50
         self.score = 0
         self.game_over = False
