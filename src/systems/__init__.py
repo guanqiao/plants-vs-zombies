@@ -1,9 +1,5 @@
-from .collision_system import CollisionSystem
-from .damage_system import DamageSystem
-from .wave_system import WaveSystem
-from .sound_manager import SoundManager
-from .animation import Animation, AnimationManager
-from .particle_system import Particle, ParticleSystem
+# ECS架构下，系统由System类统一管理
+# 具体系统实现在ecs/systems/目录下
+from src.ecs.system import System
 
-__all__ = ['CollisionSystem', 'DamageSystem', 'WaveSystem', 'SoundManager', 
-           'Animation', 'AnimationManager', 'Particle', 'ParticleSystem']
+__all__ = ['System']

@@ -1,5 +1,5 @@
-from .plant import Plant, PlantType
-from .zombie import Zombie, ZombieType
-from .projectile import Projectile, ProjectileType
+# ECS架构下，实体由Entity类统一管理
+# 具体实体类型通过组件组合实现
+from src.ecs.entity import Entity
 
-__all__ = ['Plant', 'PlantType', 'Zombie', 'ZombieType', 'Projectile', 'ProjectileType']
+__all__ = ['Entity']

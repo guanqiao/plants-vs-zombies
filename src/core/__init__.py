@@ -1,6 +1,4 @@
-from .game_manager import GameManager
-from .grid import Grid
-from .sun_system import SunSystem
+# Core模块 - 保留GameState等核心状态管理
 from .game_state import GameState, GameStateType
 
-__all__ = ['GameManager', 'Grid', 'SunSystem', 'GameState', 'GameStateType']
+__all__ = ['GameState', 'GameStateType']

@@ -151,6 +151,9 @@ class PlantingSystem:
         # 已种植的植物位置 (row, col) -> Entity
         self.planted_positions: Dict[Tuple[int, int], Entity] = {}
         
+        # 卡片冷却配置
+        self.card_cooldowns: Dict[PlantType, float] = {}
+        
         # 初始化卡片
         self._init_cards()
     
@@ -356,3 +359,80 @@ class PlantingSystem:
             self.world.destroy_entity(entity)
         self.planted_positions.clear()
         self._deselect_card()
+    
+    def register_plant_card(self, plant_type: str, cost: int, cooldown: float) -> None:
+        """
+        注册植物卡片（用于测试和动态配置）
+        
+        Args:
+            plant_type: 植物类型名称
+            cost: 阳光成本
+            cooldown: 冷却时间（秒）
+        """
+        # 将字符串转换为PlantType枚举
+        try:
+            pt = PlantType[plant_type]
+            self.card_cooldowns[pt] = cooldown
+            
+            # 检查是否已存在该类型的卡片
+            for card in self.cards:
+                if card.plant_type == pt:
+                    card.cooldown_duration = cooldown
+                    card.cost = cost
+                    return
+            
+            # 如果不存在，创建新卡片
+            # 添加到卡片列表（使用默认位置）
+            x = 150 + len(self.cards) * 70
+            y = 550
+            card = PlantCard(pt, x, y)
+            card.cost = cost
+            card.cooldown_duration = cooldown
+            self.cards.append(card)
+        except KeyError:
+            pass  # 无效的植物类型
+    
+    def can_plant(self, plant_type: str) -> bool:
+        """
+        检查是否可以种植指定植物
+        
+        Args:
+            plant_type: 植物类型名称
+            
+        Returns:
+            True if 可以种植
+        """
+        try:
+            pt = PlantType[plant_type]
+            for card in self.cards:
+                if card.plant_type == pt:
+                    return card.is_available
+        except KeyError:
+            pass
+        return False
+    
+    def plant(self, plant_type: str, row: int, col: int) -> Optional[Entity]:
+        """
+        在指定位置种植植物
+        
+        Args:
+            plant_type: 植物类型名称
+            row: 网格行
+            col: 网格列
+            
+        Returns:
+            创建的实体或None
+        """
+        try:
+            pt = PlantType[plant_type]
+            
+            # 查找对应的卡片
+            for card in self.cards:
+                if card.plant_type == pt and card.is_available:
+                    self._select_card(card)
+                    if self._can_plant_at(row, col, float('inf')):  # 假设阳光无限
+                        return self._plant_at(row, col)
+                    break
+        except KeyError:
+            pass
+        return None

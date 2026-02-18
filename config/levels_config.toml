@@ -1,0 +1,62 @@
+[levels.1]
+name = "关卡 1"
+waves = 10
+zombies_per_wave = 5
+wave_interval = 20.0
+zombie_spawn_interval = 2.0
+allowed_zombies = ["normal"]
+sun_start = 50
+
+[levels.2]
+name = "关卡 2"
+waves = 15
+zombies_per_wave = 7
+wave_interval = 18.0
+zombie_spawn_interval = 1.8
+allowed_zombies = ["normal", "conehead"]
+sun_start = 50
+
+[levels.3]
+name = "关卡 3"
+waves = 20
+zombies_per_wave = 8
+wave_interval = 16.0
+zombie_spawn_interval = 1.6
+allowed_zombies = ["normal", "conehead", "buckethead"]
+sun_start = 75
+
+[levels.4]
+name = "关卡 4"
+waves = 25
+zombies_per_wave = 10
+wave_interval = 14.0
+zombie_spawn_interval = 1.4
+allowed_zombies = ["normal", "conehead", "buckethead", "newspaper"]
+sun_start = 75
+
+[levels.5]
+name = "关卡 5"
+waves = 30
+zombies_per_wave = 12
+wave_interval = 12.0
+zombie_spawn_interval = 1.2
+allowed_zombies = ["normal", "conehead", "buckethead", "newspaper", "pole_vaulting"]
+sun_start = 100
+
+[levels.6]
+name = "关卡 6"
+waves = 35
+zombies_per_wave = 14
+wave_interval = 10.0
+zombie_spawn_interval = 1.0
+allowed_zombies = ["normal", "conehead", "buckethead", "newspaper", "pole_vaulting", "football"]
+sun_start = 100
+
+[levels.7]
+name = "关卡 7"
+waves = 40
+zombies_per_wave = 16
+wave_interval = 8.0
+zombie_spawn_interval = 0.8
+allowed_zombies = ["normal", "conehead", "buckethead", "newspaper", "pole_vaulting", "football", "dancing", "gargantuar"]
+sun_start = 125

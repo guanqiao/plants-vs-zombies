@@ -1,0 +1,172 @@
+[zombies.normal]
+name = "普通僵尸"
+health = 100
+speed = 50
+damage = 100
+attack_speed = 1.0
+width = 40
+height = 80
+color = [100, 100, 100]
+score_value = 10
+
+[zombies.flag]
+name = "旗帜僵尸"
+health = 100
+speed = 60
+damage = 100
+attack_speed = 1.0
+width = 40
+height = 80
+color = [150, 150, 150]
+score_value = 10
+
+[zombies.conehead]
+name = "路障僵尸"
+health = 200
+speed = 50
+damage = 100
+attack_speed = 1.0
+width = 40
+height = 80
+color = [255, 140, 0]
+score_value = 20
+
+[zombies.buckethead]
+name = "铁桶僵尸"
+health = 400
+speed = 50
+damage = 100
+attack_speed = 1.0
+width = 40
+height = 80
+color = [128, 128, 128]
+score_value = 40
+
+[zombies.newspaper]
+name = "读报僵尸"
+health = 150
+speed = 50
+damage = 100
+attack_speed = 1.0
+width = 40
+height = 80
+color = [139, 69, 19]
+score_value = 20
+enraged_speed = 100
+
+[zombies.pole_vaulting]
+name = "撑杆跳僵尸"
+health = 100
+speed = 80
+damage = 100
+attack_speed = 1.0
+width = 40
+height = 80
+color = [0, 100, 0]
+score_value = 30
+can_jump = true
+
+[zombies.football]
+name = "橄榄球僵尸"
+health = 500
+speed = 80
+damage = 100
+attack_speed = 1.0
+width = 40
+height = 80
+color = [50, 50, 50]
+score_value = 50
+
+[zombies.dancing]
+name = "舞王僵尸"
+health = 200
+speed = 60
+damage = 100
+attack_speed = 1.0
+width = 40
+height = 80
+color = [255, 0, 255]
+score_value = 40
+summons_backup = true
+
+[zombies.backup]
+name = "伴舞僵尸"
+health = 100
+speed = 50
+damage = 100
+attack_speed = 1.0
+width = 40
+height = 80
+color = [200, 0, 200]
+score_value = 10
+
+[zombies.snorkel]
+name = "潜水僵尸"
+health = 100
+speed = 50
+damage = 100
+attack_speed = 1.0
+width = 40
+height = 80
+color = [0, 100, 200]
+score_value = 30
+underwater = true
+
+[zombies.zomboni]
+name = "冰车僵尸"
+health = 600
+speed = 70
+damage = 100
+attack_speed = 1.0
+width = 80
+height = 80
+color = [200, 0, 0]
+score_value = 60
+crushes_plants = true
+
+[zombies.dolphin_rider]
+name = "海豚骑士僵尸"
+health = 100
+speed = 100
+damage = 100
+attack_speed = 1.0
+width = 40
+height = 80
+color = [0, 150, 150]
+score_value = 40
+can_jump = true
+
+[zombies.jack_in_the_box]
+name = "小丑僵尸"
+health = 200
+speed = 60
+damage = 100
+attack_speed = 1.0
+width = 40
+height = 80
+color = [255, 255, 0]
+score_value = 50
+explodes = true
+
+[zombies.gargantuar]
+name = "巨人僵尸"
+health = 1500
+speed = 30
+damage = 500
+attack_speed = 0.5
+width = 80
+height = 120
+color = [80, 80, 80]
+score_value = 200
+throws_imp = true
+
+[zombies.imp]
+name = "小鬼僵尸"
+health = 50
+speed = 100
+damage = 100
+attack_speed = 1.0
+width = 30
+height = 50
+color = [150, 150, 150]
+score_value = 10

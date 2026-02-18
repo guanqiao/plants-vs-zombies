@@ -1,11 +1,31 @@
-from src.core import GameManager, Grid, SunSystem, GameState, GameStateType
-from src.entities import Plant, PlantType, Zombie, ZombieType, Projectile, ProjectileType
-from src.systems import CollisionSystem, DamageSystem, WaveSystem
-from src.ui import Renderer, UIManager
+# ECS + Arcade 架构统一入口
+from src.ecs import World, Entity, Component, System
+from src.ecs.components import (
+    TransformComponent, SpriteComponent, HealthComponent,
+    VelocityComponent, GridPositionComponent, PlantComponent,
+    PlantTypeComponent, PlantType, ZombieComponent,
+    ZombieTypeComponent, ZombieType, ProjectileComponent,
+    ProjectileTypeComponent, ProjectileType, CollisionComponent,
+    AttackComponent, SunProducerComponent
+)
+from src.ecs.systems import (
+    MovementSystem, CollisionSystem, ProjectileSystem,
+    HealthSystem, ZombieBehaviorSystem, PlantBehaviorSystem,
+    SunSystem, WaveSystem, RenderSystem
+)
 
 __all__ = [
-    'GameManager', 'Grid', 'SunSystem', 'GameState', 'GameStateType',
-    'Plant', 'PlantType', 'Zombie', 'ZombieType', 'Projectile', 'ProjectileType',
-    'CollisionSystem', 'DamageSystem', 'WaveSystem',
-    'Renderer', 'UIManager'
+    # ECS Core
+    'World', 'Entity', 'Component', 'System',
+    # Components
+    'TransformComponent', 'SpriteComponent', 'HealthComponent',
+    'VelocityComponent', 'GridPositionComponent', 'PlantComponent',
+    'PlantTypeComponent', 'PlantType', 'ZombieComponent',
+    'ZombieTypeComponent', 'ZombieType', 'ProjectileComponent',
+    'ProjectileTypeComponent', 'ProjectileType', 'CollisionComponent',
+    'AttackComponent', 'SunProducerComponent',
+    # Systems
+    'MovementSystem', 'CollisionSystem', 'ProjectileSystem',
+    'HealthSystem', 'ZombieBehaviorSystem', 'PlantBehaviorSystem',
+    'SunSystem', 'WaveSystem', 'RenderSystem',
 ]

@@ -253,9 +253,14 @@ class TestZombieSystemIntegration:
         assert spawned is not None
         zombie = spawned[0]
         
-        # 4. 创建植物
+        # 3. 获取僵尸所在行
+        zombie_grid = self.world.get_component(zombie, GridPositionComponent)
+        zombie_row = zombie_grid.row
+        
+        # 4. 在相同行创建植物
+        y = 50 + zombie_row * 100 + 50  # 根据行计算Y坐标
         plant = self.entity_factory.create_plant(
-            PlantType.PEASHOOTER, x=400, y=150, row=1, col=2
+            PlantType.PEASHOOTER, x=400, y=y, row=zombie_row, col=2
         )
         
         # 5. 移动僵尸到植物位置
