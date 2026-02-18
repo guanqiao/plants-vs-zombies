@@ -13,6 +13,7 @@ from .entity_factory import EntityFactory
 from .planting_system import PlantingSystem
 from .zombie_spawner import ZombieSpawner
 from .sun_collection_system import SunCollectionSystem
+from .audio_manager import get_audio_manager
 
 
 class GameWindow(arcade.Window):
@@ -53,6 +54,9 @@ class GameWindow(arcade.Window):
         # 创建阳光收集系统
         self.sun_collection_system = SunCollectionSystem(self.world, self.entity_factory)
         self.sun_collection_system.register_collection_callback(self._on_sun_collected)
+        
+        # 获取音效管理器
+        self.audio_manager = get_audio_manager()
         
         # 注册僵尸死亡回调
         self.zombie_behavior_system.register_death_callback(self._on_zombie_death)
@@ -259,15 +263,21 @@ class GameWindow(arcade.Window):
             transform = self.world.get_component(entity_id, TransformComponent)
             if transform and transform.x <= 0:
                 self.game_over = True
+                # 播放游戏结束音效
+                self.audio_manager.play_game_over_sound()
                 return
         
         # 检查是否完成所有波次且没有僵尸
         if self.zombie_spawner.is_level_complete():
             self.victory = True
+            # 播放胜利音效
+            self.audio_manager.play_victory_sound()
     
     def _on_zombie_death(self, zombie_id: int, score_value: int):
         """僵尸死亡回调"""
         self.add_score(score_value)
+        # 播放僵尸死亡音效
+        self.audio_manager.play_zombie_death_sound()
     
     def _on_sun_collected(self, amount: int):
         """阳光收集回调"""
@@ -294,10 +304,14 @@ class GameWindow(arcade.Window):
         
         # 先尝试收集阳光
         if self.sun_collection_system.handle_mouse_press(x, y):
+            # 播放收集音效
+            self.audio_manager.play_collect_sun_sound()
             return
         
         # 处理种植
         if self.planting_system.handle_mouse_press(x, y, self.sun_count):
+            # 播放种植音效
+            self.audio_manager.play_plant_sound()
             # 消耗阳光
             cost = self.planting_system.get_planting_cost()
             if cost > 0:
