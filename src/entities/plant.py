@@ -17,6 +17,13 @@ class PlantType(Enum):
     POTATO_MINE = auto()
     REPEATER = auto()
     CHOMPER = auto()
+    THREEPEATER = auto()
+    MELON_PULT = auto()
+    WINTER_MELON = auto()
+    TALL_NUT = auto()
+    SPIKEWEED = auto()
+    MAGNET_SHROOM = auto()
+    PUMPKIN = auto()
 
 
 PLANT_CONFIGS = {
@@ -75,6 +82,55 @@ PLANT_CONFIGS = {
         'width': 80,
         'height': 80,
         'color': (128, 0, 128),
+    },
+    PlantType.THREEPEATER: {
+        'cost': 325,
+        'health': 100,
+        'width': 60,
+        'height': 80,
+        'color': (0, 180, 0),
+    },
+    PlantType.MELON_PULT: {
+        'cost': 300,
+        'health': 100,
+        'width': 70,
+        'height': 80,
+        'color': (0, 150, 0),
+    },
+    PlantType.WINTER_MELON: {
+        'cost': 500,
+        'health': 100,
+        'width': 70,
+        'height': 80,
+        'color': (100, 150, 200),
+    },
+    PlantType.TALL_NUT: {
+        'cost': 125,
+        'health': 800,
+        'width': 60,
+        'height': 100,
+        'color': (160, 120, 80),
+    },
+    PlantType.SPIKEWEED: {
+        'cost': 100,
+        'health': 100,
+        'width': 60,
+        'height': 40,
+        'color': (100, 100, 100),
+    },
+    PlantType.MAGNET_SHROOM: {
+        'cost': 100,
+        'health': 100,
+        'width': 60,
+        'height': 70,
+        'color': (128, 0, 128),
+    },
+    PlantType.PUMPKIN: {
+        'cost': 125,
+        'health': 400,
+        'width': 70,
+        'height': 70,
+        'color': (255, 140, 0),
     },
 }
 

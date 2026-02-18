@@ -104,6 +104,13 @@ class SunSystem:
                 sun.collect()
                 sun.collect_target = (50, 30)
                 game_manager.add_sun(sun.value)
+                
+                # 播放收集音效和粒子效果
+                if game_manager.sound_manager:
+                    game_manager.sound_manager.play_sound('sun_collect')
+                if game_manager.particle_system:
+                    game_manager.particle_system.create_sun_collect(sun.x, sun.y)
+                
                 return True
         
         return False

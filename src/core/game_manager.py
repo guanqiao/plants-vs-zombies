@@ -9,6 +9,8 @@ from src.entities.zombie import Zombie
 from src.entities.projectile import Projectile
 from src.systems.collision_system import CollisionSystem
 from src.systems.wave_system import WaveSystem
+from src.systems.particle_system import ParticleSystem
+from src.systems.sound_manager import SoundManager
 from src.ui.renderer import Renderer
 from src.ui.ui_manager import UIManager
 
@@ -35,6 +37,8 @@ class GameManager:
         self.sun_system: Optional[SunSystem] = None
         self.collision_system: Optional[CollisionSystem] = None
         self.wave_system: Optional[WaveSystem] = None
+        self.particle_system: Optional[ParticleSystem] = None
+        self.sound_manager: Optional[SoundManager] = None
         
         self.renderer = Renderer()
         self.ui_manager = UIManager()
@@ -56,6 +60,9 @@ class GameManager:
         self.sun_system = SunSystem()
         self.collision_system = CollisionSystem()
         self.wave_system = WaveSystem(level)
+        self.particle_system = ParticleSystem()
+        self.sound_manager = SoundManager()
+        self.sound_manager.preload_game_sounds()
         
         self.plants.clear()
         self.zombies.clear()
@@ -92,6 +99,12 @@ class GameManager:
         if zombie in self.zombies:
             self.zombies.remove(zombie)
             self.score += zombie.score_value
+            
+            # 播放死亡音效和粒子效果
+            if self.sound_manager:
+                self.sound_manager.play_sound('zombie_die')
+            if self.particle_system:
+                self.particle_system.create_death_effect(zombie.x, zombie.y, zombie.color)
     
     def add_projectile(self, projectile: Projectile):
         """添加投射物"""
@@ -135,6 +148,9 @@ class GameManager:
         if self.sun_system:
             self.sun_system.update(dt, self)
         
+        if self.particle_system:
+            self.particle_system.update(dt)
+        
         for plant in self.plants[:]:
             plant.update(dt, self)
         
@@ -177,6 +193,9 @@ class GameManager:
         
         for projectile in self.projectiles:
             projectile.render(self.screen)
+        
+        if self.particle_system:
+            self.particle_system.render(self.screen)
         
         if self.sun_system:
             self.sun_system.render(self.screen)

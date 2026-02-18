@@ -11,6 +11,8 @@ class ProjectileType(Enum):
     PEA = auto()
     FROZEN_PEA = auto()
     CHERRY_BOMB = auto()
+    MELON = auto()
+    FROZEN_MELON = auto()
 
 
 PROJECTILE_CONFIGS = {
@@ -35,6 +37,25 @@ PROJECTILE_CONFIGS = {
         'height': 100,
         'color': (255, 0, 0),
     },
+    ProjectileType.MELON: {
+        'damage': 80,
+        'speed': 250,
+        'width': 25,
+        'height': 25,
+        'color': (0, 150, 0),
+        'splash_damage': 40,
+        'splash_radius': 60,
+    },
+    ProjectileType.FROZEN_MELON: {
+        'damage': 80,
+        'speed': 250,
+        'width': 25,
+        'height': 25,
+        'color': (135, 206, 250),
+        'splash_damage': 40,
+        'splash_radius': 60,
+        'slow_effect': True,
+    },
 }
 
 
@@ -55,6 +76,10 @@ class Projectile:
         self.width = config.get('width', 15)
         self.height = config.get('height', 15)
         self.color = config.get('color', (0, 200, 0))
+        
+        self.splash_damage = config.get('splash_damage', 0)
+        self.splash_radius = config.get('splash_radius', 0)
+        self.slow_effect = config.get('slow_effect', False)
         
         self._dead = False
     
@@ -91,3 +116,7 @@ class Projectile:
         
         if self.projectile_type == ProjectileType.FROZEN_PEA:
             pygame.draw.circle(screen, (200, 230, 255), (int(self.x), int(self.y)), self.width // 3)
+        elif self.projectile_type in (ProjectileType.MELON, ProjectileType.FROZEN_MELON):
+            pygame.draw.circle(screen, (255, 100, 0), (int(self.x), int(self.y)), self.width // 2 - 3)
+            pygame.draw.circle(screen, (0, 100, 0), (int(self.x - 3), int(self.y - 3)), 3)
+            pygame.draw.circle(screen, (0, 100, 0), (int(self.x + 3), int(self.y + 3)), 3)

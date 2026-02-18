@@ -1,7 +1,10 @@
 import pygame
 from typing import List, Dict, TYPE_CHECKING
 from src.entities.plant import PlantType
-from src.entities.plants import Sunflower, Peashooter, Repeater, SnowPea, WallNut, CherryBomb, PotatoMine, Chomper
+from src.entities.plants import (
+    Sunflower, Peashooter, Repeater, SnowPea, WallNut, CherryBomb, PotatoMine, Chomper,
+    Threepeater, MelonPult, WinterMelon, TallNut, Spikeweed, MagnetShroom, Pumpkin
+)
 
 if TYPE_CHECKING:
     from src.core.game_manager import GameManager
@@ -16,6 +19,13 @@ PLANT_CARD_INFO = [
     {'type': PlantType.CHERRY_BOMB, 'name': '樱桃炸弹', 'cost': 150, 'key': '6'},
     {'type': PlantType.POTATO_MINE, 'name': '土豆地雷', 'cost': 25, 'key': '7'},
     {'type': PlantType.CHOMPER, 'name': '大嘴花', 'cost': 150, 'key': '8'},
+    {'type': PlantType.THREEPEATER, 'name': '三线射手', 'cost': 325, 'key': '9'},
+    {'type': PlantType.MELON_PULT, 'name': '西瓜投手', 'cost': 300, 'key': '0'},
+    {'type': PlantType.WINTER_MELON, 'name': '冰西瓜', 'cost': 500, 'key': 'q'},
+    {'type': PlantType.TALL_NUT, 'name': '高坚果', 'cost': 125, 'key': 'w'},
+    {'type': PlantType.SPIKEWEED, 'name': '地刺', 'cost': 100, 'key': 'e'},
+    {'type': PlantType.MAGNET_SHROOM, 'name': '磁力菇', 'cost': 100, 'key': 'r'},
+    {'type': PlantType.PUMPKIN, 'name': '南瓜头', 'cost': 125, 'key': 't'},
 ]
 
 
@@ -28,6 +38,13 @@ PLANT_FACTORY = {
     PlantType.CHERRY_BOMB: CherryBomb,
     PlantType.POTATO_MINE: PotatoMine,
     PlantType.CHOMPER: Chomper,
+    PlantType.THREEPEATER: Threepeater,
+    PlantType.MELON_PULT: MelonPult,
+    PlantType.WINTER_MELON: WinterMelon,
+    PlantType.TALL_NUT: TallNut,
+    PlantType.SPIKEWEED: Spikeweed,
+    PlantType.MAGNET_SHROOM: MagnetShroom,
+    PlantType.PUMPKIN: Pumpkin,
 }
 
 
@@ -122,6 +139,13 @@ class UIManager:
                 PlantType.CHERRY_BOMB: (220, 20, 60),
                 PlantType.POTATO_MINE: (160, 82, 45),
                 PlantType.CHOMPER: (128, 0, 128),
+                PlantType.THREEPEATER: (0, 180, 0),
+                PlantType.MELON_PULT: (0, 150, 0),
+                PlantType.WINTER_MELON: (100, 150, 200),
+                PlantType.TALL_NUT: (160, 120, 80),
+                PlantType.SPIKEWEED: (100, 100, 100),
+                PlantType.MAGNET_SHROOM: (128, 0, 128),
+                PlantType.PUMPKIN: (255, 140, 0),
             }
             
             color = plant_colors.get(card_info['type'], (100, 100, 100))
@@ -171,6 +195,13 @@ class UIManager:
                 PlantType.CHERRY_BOMB: (220, 20, 60),
                 PlantType.POTATO_MINE: (160, 82, 45),
                 PlantType.CHOMPER: (128, 0, 128),
+                PlantType.THREEPEATER: (0, 180, 0),
+                PlantType.MELON_PULT: (0, 150, 0),
+                PlantType.WINTER_MELON: (100, 150, 200),
+                PlantType.TALL_NUT: (160, 120, 80),
+                PlantType.SPIKEWEED: (100, 100, 100),
+                PlantType.MAGNET_SHROOM: (128, 0, 128),
+                PlantType.PUMPKIN: (255, 140, 0),
             }
             
             color = plant_colors.get(self.selected_plant, (100, 100, 100))
