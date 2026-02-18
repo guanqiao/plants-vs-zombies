@@ -11,6 +11,7 @@ from ..ecs.systems import (
 )
 from .entity_factory import EntityFactory
 from .planting_system import PlantingSystem
+from .zombie_spawner import ZombieSpawner
 
 
 class GameWindow(arcade.Window):
@@ -43,6 +44,13 @@ class GameWindow(arcade.Window):
         
         # 创建种植系统
         self.planting_system = PlantingSystem(self.world, self.entity_factory)
+        
+        # 创建僵尸生成器
+        self.zombie_spawner = ZombieSpawner(self.world, self.entity_factory)
+        self.zombie_spawner.set_level(self.current_level)
+        
+        # 注册僵尸死亡回调
+        self.zombie_behavior_system.register_death_callback(self._on_zombie_death)
         
         # 游戏状态
         self.sun_count = 50
@@ -102,6 +110,9 @@ class GameWindow(arcade.Window):
         
         # 更新种植系统
         self.planting_system.update(delta_time, self.sun_count)
+        
+        # 更新僵尸生成器
+        self.zombie_spawner.update(delta_time)
         
         # 检查游戏结束条件
         self._check_game_over()
@@ -167,7 +178,7 @@ class GameWindow(arcade.Window):
         )
         
         # 波次信息
-        wave_info = self.wave_system.get_wave_info()
+        wave_info = self.zombie_spawner.get_wave_info()
         arcade.draw_text(
             wave_info,
             self.SCREEN_WIDTH - 200, self.SCREEN_HEIGHT - 30,
@@ -240,8 +251,12 @@ class GameWindow(arcade.Window):
                 return
         
         # 检查是否完成所有波次且没有僵尸
-        if self.wave_system.is_complete() and len(zombies) == 0:
+        if self.zombie_spawner.is_level_complete():
             self.victory = True
+    
+    def _on_zombie_death(self, zombie_id: int, score_value: int):
+        """僵尸死亡回调"""
+        self.add_score(score_value)
     
     def on_key_press(self, key, modifiers):
         """处理键盘按键"""
@@ -274,11 +289,14 @@ class GameWindow(arcade.Window):
         """重置游戏"""
         self.world.clear()
         self.planting_system.clear()
+        self.zombie_spawner.reset()
         self.sun_count = 50
         self.score = 0
         self.game_over = False
         self.victory = False
         self._init_systems()
+        self.zombie_spawner.set_level(self.current_level)
+        self.zombie_behavior_system.register_death_callback(self._on_zombie_death)
     
     def next_level(self):
         """进入下一关"""
