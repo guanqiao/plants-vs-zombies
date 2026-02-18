@@ -12,6 +12,7 @@ from ..ecs.systems import (
 from .entity_factory import EntityFactory
 from .planting_system import PlantingSystem
 from .zombie_spawner import ZombieSpawner
+from .sun_collection_system import SunCollectionSystem
 
 
 class GameWindow(arcade.Window):
@@ -48,6 +49,10 @@ class GameWindow(arcade.Window):
         # 创建僵尸生成器
         self.zombie_spawner = ZombieSpawner(self.world, self.entity_factory)
         self.zombie_spawner.set_level(self.current_level)
+        
+        # 创建阳光收集系统
+        self.sun_collection_system = SunCollectionSystem(self.world, self.entity_factory)
+        self.sun_collection_system.register_collection_callback(self._on_sun_collected)
         
         # 注册僵尸死亡回调
         self.zombie_behavior_system.register_death_callback(self._on_zombie_death)
@@ -114,6 +119,9 @@ class GameWindow(arcade.Window):
         # 更新僵尸生成器
         self.zombie_spawner.update(delta_time)
         
+        # 更新阳光收集系统
+        self.sun_collection_system.update(delta_time)
+        
         # 检查游戏结束条件
         self._check_game_over()
     
@@ -132,6 +140,9 @@ class GameWindow(arcade.Window):
         
         # 渲染种植系统
         self.planting_system.render()
+        
+        # 渲染阳光
+        self.sun_collection_system.render_suns()
         
         # 渲染游戏结束/胜利画面
         if self.game_over:
@@ -258,6 +269,10 @@ class GameWindow(arcade.Window):
         """僵尸死亡回调"""
         self.add_score(score_value)
     
+    def _on_sun_collected(self, amount: int):
+        """阳光收集回调"""
+        self.add_sun(amount)
+    
     def on_key_press(self, key, modifiers):
         """处理键盘按键"""
         if key == arcade.key.ESCAPE:
@@ -277,6 +292,10 @@ class GameWindow(arcade.Window):
         if self.game_over or self.victory:
             return
         
+        # 先尝试收集阳光
+        if self.sun_collection_system.handle_mouse_press(x, y):
+            return
+        
         # 处理种植
         if self.planting_system.handle_mouse_press(x, y, self.sun_count):
             # 消耗阳光
@@ -290,6 +309,7 @@ class GameWindow(arcade.Window):
         self.world.clear()
         self.planting_system.clear()
         self.zombie_spawner.reset()
+        self.sun_collection_system.reset()
         self.sun_count = 50
         self.score = 0
         self.game_over = False
@@ -297,6 +317,7 @@ class GameWindow(arcade.Window):
         self._init_systems()
         self.zombie_spawner.set_level(self.current_level)
         self.zombie_behavior_system.register_death_callback(self._on_zombie_death)
+        self.sun_collection_system.register_collection_callback(self._on_sun_collected)
     
     def next_level(self):
         """进入下一关"""
