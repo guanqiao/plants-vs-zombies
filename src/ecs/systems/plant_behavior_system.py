@@ -306,6 +306,21 @@ class PlantBehaviorSystem(System):
         plant_health = component_manager.get_component(entity_id, HealthComponent)
         if plant_health:
             plant_health.take_damage(plant_health.current)
+        
+        # 发布植物死亡事件，通知外部系统销毁实体
+        if self.event_bus:
+            grid_pos = component_manager.get_component(entity_id, GridPositionComponent)
+            self.event_bus.publish(Event(
+                EventType.PLANT_DIED,
+                {
+                    'entity_id': entity_id,
+                    'plant_type': PlantType.CHERRY_BOMB,
+                    'row': grid_pos.row if grid_pos else -1,
+                    'col': grid_pos.col if grid_pos else -1,
+                    'x': transform.x,
+                    'y': transform.y
+                }
+            ))
     
     def _check_potato_mine(self, entity_id: int, transform, grid_pos,
                            component_manager: ComponentManager) -> None:

@@ -207,8 +207,7 @@ class ExplosivePlantSystem(BasePlantSystem):
             if distance <= radius:
                 zombie_health.take_damage(damage)
         
-        # 销毁植物实体
-        from ....ecs import Entity
-        plant_entity = Entity()
-        plant_entity.id = plant_id
-        # 这里应该调用world.destroy_entity，但需要通过其他方式实现
+        # 标记植物实体为死亡（实际销毁由外部系统处理）
+        plant_health = component_manager.get_component(plant_id, HealthComponent)
+        if plant_health:
+            plant_health.take_damage(plant_health.current)

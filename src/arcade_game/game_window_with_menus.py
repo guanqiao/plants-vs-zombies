@@ -56,6 +56,9 @@ class GameWindowWithMenus(arcade.Window):
         self.game_state = GameStateManager()
         self._setup_game_state_callbacks()
         
+        # 音效管理器（尽早初始化）
+        self.audio_manager = get_audio_manager()
+        
         # 菜单系统
         self.menu_system = MenuSystem(self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
         self._setup_menu_callbacks()
@@ -72,7 +75,6 @@ class GameWindowWithMenus(arcade.Window):
         self.planting_system = None
         self.zombie_spawner = None
         self.sun_collection_system = None
-        self.audio_manager = None
         self.particle_system = None
         self.health_bar_system = None
         self.damage_number_system = None
@@ -109,6 +111,11 @@ class GameWindowWithMenus(arcade.Window):
         self.menu_system.on_restart = self._on_menu_restart
         self.menu_system.on_main_menu = self._on_menu_main_menu
         self.menu_system.on_difficulty_selected = self._on_difficulty_selected
+        
+        # 音量回调
+        self.menu_system.on_master_volume_change = self._on_master_volume_change
+        self.menu_system.on_sfx_volume_change = self._on_sfx_volume_change
+        self.menu_system.on_music_volume_change = self._on_music_volume_change
     
     def _init_game_components(self, level: int = 1, difficulty: str = "normal"):
         """初始化游戏组件"""
@@ -150,9 +157,6 @@ class GameWindowWithMenus(arcade.Window):
             difficulty_config.auto_sun_spawn_interval,
             difficulty_config.sun_value
         )
-        
-        # 创建音效管理器
-        self.audio_manager = get_audio_manager()
         
         # 创建粒子系统
         self.particle_system = ParticleSystem()
@@ -274,7 +278,19 @@ class GameWindowWithMenus(arcade.Window):
     
     def _on_menu_settings(self):
         """菜单设置"""
-        print("设置功能待实现")
+        self.menu_system.show_settings()
+
+    def _on_master_volume_change(self, value: float):
+        """主音量变化回调"""
+        self.audio_manager.set_master_volume(value)
+
+    def _on_sfx_volume_change(self, value: float):
+        """音效音量变化回调"""
+        self.audio_manager.set_sfx_volume(value)
+
+    def _on_music_volume_change(self, value: float):
+        """音乐音量变化回调"""
+        self.audio_manager.set_music_volume(value)
     
     def _on_menu_quit(self):
         """菜单退出"""
@@ -348,6 +364,9 @@ class GameWindowWithMenus(arcade.Window):
         if self.damage_number_system:
             self.damage_number_system.render()
         
+        if self.planting_system:
+            self.planting_system.render(self._mouse_x, self._mouse_y)
+        
         if self.ui_renderer:
             self.ui_renderer.render(self.sun_count, self.score, self.current_level)
         
@@ -371,7 +390,7 @@ class GameWindowWithMenus(arcade.Window):
         
         # 更新种植系统的鼠标位置
         if self.planting_system:
-            self.planting_system.on_mouse_motion(x, y)
+            self.planting_system.handle_mouse_move(x, y)
     
     def on_mouse_press(self, x: float, y: float, button: int, modifiers: int):
         """处理鼠标点击"""
@@ -383,26 +402,38 @@ class GameWindowWithMenus(arcade.Window):
         # 如果在游戏中，处理游戏逻辑
         if self.game_state.is_playing():
             if button == arcade.MOUSE_BUTTON_LEFT:
-                # 尝试种植
-                if self.planting_system and self.planting_system.can_plant_at(x, y):
-                    plant_type = self.planting_system.get_selected_plant_type()
-                    if plant_type and self.sun_count >= self.planting_system.get_plant_cost(plant_type):
-                        entity = self.planting_system.plant_at(x, y, plant_type)
-                        if entity:
-                            self.sun_count -= self.planting_system.get_plant_cost(plant_type)
-                            self.audio_manager.play_plant_sound()
-                            self.particle_system.create_plant_effect(x, y)
-                
-                # 尝试收集阳光
+                # 先尝试收集阳光
                 if self.sun_collection_system:
                     collected = self.sun_collection_system.try_collect_sun(x, y)
                     if collected:
                         self.audio_manager.play_sun_collect_sound()
+                        return
+                
+                # 使用 planting_system 处理种植/铲子点击
+                if self.planting_system:
+                    handled, planted, removed = self.planting_system.handle_mouse_press(
+                        x, y, self.sun_count, return_tuple=True
+                    )
+                    if handled:
+                        if planted:
+                            # 处理种植后的逻辑
+                            plant_type = None
+                            if self.planting_system.selected_card:
+                                plant_type = self.planting_system.selected_card.plant_type
+                            self.sun_count -= self.planting_system.get_planting_cost()
+                            self.audio_manager.play_plant_sound()
+                            self.particle_system.create_plant_effect(x, y)
+                        elif removed:
+                            # 处理移除植物
+                            pass
+                        return
             
             elif button == arcade.MOUSE_BUTTON_RIGHT:
-                # 取消种植选择
+                # 取消种植选择或退出铲子模式
                 if self.planting_system:
                     self.planting_system.cancel_selection()
+                    if hasattr(self.planting_system, 'shovel_mode'):
+                        self.planting_system.shovel_mode = False
     
     def on_key_press(self, key: int, modifiers: int):
         """处理键盘按键"""

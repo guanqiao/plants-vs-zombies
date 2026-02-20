@@ -5,6 +5,10 @@
 import os
 from pathlib import Path
 from ..ecs import World, Entity
+from ..core.logger import get_module_logger
+
+
+logger = get_module_logger(__name__)
 from ..ecs.components import (
     TransformComponent, SpriteComponent, HealthComponent,
     VelocityComponent, CollisionComponent, GridPositionComponent,
@@ -105,7 +109,7 @@ class EntityFactory:
                 with open(config_path, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
-                print(f"加载精灵表配置失败: {e}")
+                logger.warning(f"加载精灵表配置失败: {e}")
         return {}
     
     def _load_sprite_sheet_animation(self, sheet_config: dict, assets_dir: Path) -> list:
@@ -149,7 +153,7 @@ class EntityFactory:
                 frames.append(AnimationFrame(frame_texture, frame_duration))
                 
         except Exception as e:
-            print(f"加载精灵表失败 {sheet_path}: {e}")
+            logger.warning(f"加载精灵表失败 {sheet_path}: {e}")
         
         return frames
     

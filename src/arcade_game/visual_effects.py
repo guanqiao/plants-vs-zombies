@@ -241,7 +241,7 @@ class VisualEffectsSystem:
         # 多层发光
         for i in range(3):
             r = effect.radius * (1.0 + i * 0.3)
-            a = max(0, alpha - i * 50)
+            a = max(0, min(255, alpha - i * 50))  # 限制alpha在0-255范围内
             if a > 0:
                 color = (*effect.color, a)
                 arcade.draw_circle_filled(effect.x, effect.y, r, color)

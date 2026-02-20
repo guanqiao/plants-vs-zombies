@@ -2,6 +2,10 @@ from enum import Enum, auto
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Any, Tuple
 import heapq
+from .logger import get_module_logger
+
+
+logger = get_module_logger(__name__)
 
 
 class EventType(Enum):
@@ -118,7 +122,7 @@ class EventBus:
                 try:
                     callback(event)
                 except Exception as e:
-                    print(f"[EventBus] 事件处理器异常 ({event.event_type.name}): {e}")
+                    logger.error(f"事件处理器异常 ({event.event_type.name}): {e}")
     
     def process_events(self):
         """处理事件队列中的所有事件"""

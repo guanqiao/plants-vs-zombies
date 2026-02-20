@@ -11,6 +11,10 @@
 from typing import Dict, Optional
 from enum import Enum, auto
 import arcade
+from ..core.logger import get_module_logger
+
+
+logger = get_module_logger(__name__)
 
 
 class SoundType(Enum):
@@ -60,17 +64,38 @@ class AudioManager:
     
     def _load_sounds(self) -> None:
         """加载所有音效"""
-        # 使用Arcade内置的音效作为占位符
-        # 在实际项目中，应该加载自定义音效文件
+        # 检查assets目录是否存在
+        import os
+        assets_dir = "assets/sounds"
+        if not os.path.exists(assets_dir):
+            os.makedirs(assets_dir, exist_ok=True)
         
-        # 尝试加载自定义音效，如果失败则使用占位符
-        try:
-            # 这里可以加载自定义音效文件
-            # self.sounds[SoundType.PLANT] = arcade.load_sound("assets/sounds/plant.wav")
-            pass
-        except:
-            # 使用占位音效（在实际项目中应该替换为真实音效）
-            pass
+        # 尝试加载自定义音效，如果失败则静默跳过
+        sound_files = {
+            SoundType.PLANT: "plant.wav",
+            SoundType.SHOOT: "shoot.wav",
+            SoundType.HIT: "hit.wav",
+            SoundType.COLLECT_SUN: "collect_sun.wav",
+            SoundType.ZOMBIE_DEATH: "zombie_death.wav",
+            SoundType.ZOMBIE_EAT: "zombie_eat.wav",
+            SoundType.GAME_OVER: "game_over.wav",
+            SoundType.VICTORY: "victory.wav",
+            SoundType.BUTTON_CLICK: "button_click.wav",
+            SoundType.EXPLOSION: "explosion.wav",
+            SoundType.CHERRY_BOMB: "cherry_bomb.wav",
+            SoundType.POTATO_MINE: "potato_mine.wav",
+            SoundType.ICE_HIT: "ice_hit.wav",
+            SoundType.FIRE_HIT: "fire_hit.wav",
+            SoundType.SPLASH: "splash.wav"
+        }
+        
+        for sound_type, filename in sound_files.items():
+            file_path = os.path.join(assets_dir, filename)
+            if os.path.exists(file_path):
+                try:
+                    self.sounds[sound_type] = arcade.load_sound(file_path)
+                except Exception as e:
+                    logger.warning(f"无法加载音效 {filename}: {e}")
     
     def play_sound(self, sound_type: SoundType, volume: float = 1.0) -> None:
         """
@@ -111,7 +136,7 @@ class AudioManager:
                     loop=loop
                 )
         except Exception as e:
-            print(f"无法加载音乐: {music_path}, 错误: {e}")
+            logger.warning(f"无法加载音乐: {music_path}, 错误: {e}")
     
     def stop_music(self) -> None:
         """停止背景音乐"""
@@ -202,7 +227,7 @@ class AudioManager:
             self.sounds[sound_type] = sound
             return True
         except Exception as e:
-            print(f"加载音效失败: {file_path}, 错误: {e}")
+            logger.error(f"加载音效失败: {file_path}, 错误: {e}")
             return False
     
     def play_plant_sound(self) -> None:

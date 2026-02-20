@@ -7,6 +7,10 @@ from ..system import System
 from ..component import ComponentManager
 from ..components import TransformComponent, SpriteComponent
 from ..components.animation_component import AnimationComponent
+from ...core.logger import get_module_logger
+
+
+logger = get_module_logger(__name__)
 
 
 class RenderSystem(System):
@@ -14,14 +18,15 @@ class RenderSystem(System):
     渲染系统
     
     负责渲染所有拥有TransformComponent和SpriteComponent的实体
-    支持精灵图和动画渲染
+    支持精灵图和动画渲染，集成3D视觉效果
     """
     
-    def __init__(self, priority: int = 100):
+    def __init__(self, priority: int = 100, three_d_effects = None):
         super().__init__(priority)
         self._sprite_list = arcade.SpriteList()
         self._needs_rebuild = True
         self._last_entity_count = 0  # 用于检测实体数量变化
+        self._three_d_effects = three_d_effects
     
     def update(self, dt: float, component_manager: ComponentManager) -> None:
         """
@@ -51,7 +56,7 @@ class RenderSystem(System):
         # 调试输出（当实体数量变化时）
         current_count = len(entities)
         if current_count != self._last_entity_count:
-            print(f"[RenderSystem] 实体数量: {current_count}")
+            logger.debug(f"实体数量: {current_count}")
             self._last_entity_count = current_count
         
         for entity_id in entities:
@@ -60,7 +65,7 @@ class RenderSystem(System):
             anim_comp = component_manager.get_component(entity_id, AnimationComponent)
             
             if transform and sprite:
-                self._draw_entity(transform, sprite, anim_comp)
+                self._draw_entity(transform, sprite, anim_comp, entity_id)
     
     def _get_sorted_entities(self, component_manager: ComponentManager) -> list:
         """
@@ -85,7 +90,8 @@ class RenderSystem(System):
     
     def _draw_entity(self, transform: TransformComponent, 
                      sprite: SpriteComponent,
-                     anim_comp: AnimationComponent = None) -> None:
+                     anim_comp: AnimationComponent = None,
+                     entity_id: int = 0) -> None:
         """
         绘制单个实体
         
@@ -93,6 +99,7 @@ class RenderSystem(System):
             transform: 变换组件
             sprite: 精灵组件
             anim_comp: 动画组件（可选）
+            entity_id: 实体ID（用于3D效果）
         """
         # 如果有动画组件且当前有纹理，使用纹理渲染
         if anim_comp:
@@ -102,7 +109,7 @@ class RenderSystem(System):
                     self._draw_textured_entity(transform, sprite, anim_comp, texture)
                     return
                 except Exception as e:
-                    print(f"[RenderSystem] 纹理渲染失败: {e}")
+                    logger.error(f"纹理渲染失败: {e}")
         
         # 如果有精灵图路径，尝试加载并渲染
         if sprite.sprite_path:
@@ -115,7 +122,8 @@ class RenderSystem(System):
     def _draw_textured_entity(self, transform: TransformComponent,
                               sprite: SpriteComponent,
                               anim_comp: AnimationComponent,
-                              texture) -> None:
+                              texture,
+                              entity_id: int = 0) -> None:
         """
         使用纹理绘制实体
         
@@ -124,25 +132,55 @@ class RenderSystem(System):
             sprite: 精灵组件
             anim_comp: 动画组件
             texture: 纹理对象
+            entity_id: 实体ID（用于3D效果）
         """
         # 计算绘制参数
         x = transform.x
         y = transform.y
-        scale = anim_comp.scale if anim_comp else 1.0
-        width = sprite.width * scale
-        height = sprite.height * scale
+        base_scale = anim_comp.scale if anim_comp else 1.0
+        base_width = sprite.width * base_scale
+        base_height = sprite.height * base_scale
+        
+        # 应用3D效果
+        adjusted_x = x
+        adjusted_y = y
+        final_scale = base_scale
+        
+        if self._three_d_effects:
+            adjusted_x, adjusted_y, perspective_scale = self._three_d_effects.draw_3d_effects(
+                entity_id, x, y,
+                base_width, base_height,
+                screen_height=600,
+                enable_shadow=True,
+                enable_highlight=True,
+                enable_edge=False,
+                enable_float=True
+            )
+            final_scale = perspective_scale * base_scale
+        
+        final_width = sprite.width * final_scale
+        final_height = sprite.height * final_scale
         
         # 绘制纹理
         try:
             arcade.draw_texture_rect(
                 texture,
-                arcade.XYWH(x, y, width, height),
+                arcade.XYWH(adjusted_x, adjusted_y, final_width, final_height),
                 alpha=sprite.alpha
             )
         except Exception as e:
-            print(f"[RenderSystem] draw_texture_rect 失败: {e}")
+            logger.error(f"draw_texture_rect 失败: {e}")
             # 回退到纯色渲染
             self._draw_colored_entity(transform, sprite)
+        
+        # 应用后处理3D效果（高光）
+        if self._three_d_effects:
+            self._three_d_effects.apply_post_effects(
+                entity_id, adjusted_x, adjusted_y,
+                final_width, final_height,
+                enable_highlight=True,
+                enable_edge=False
+            )
     
     def _draw_colored_entity(self, transform: TransformComponent,
                              sprite: SpriteComponent) -> None:

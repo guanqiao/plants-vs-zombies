@@ -13,6 +13,10 @@ import os
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from datetime import datetime
+from ..core.logger import get_module_logger
+
+
+logger = get_module_logger(__name__)
 
 
 @dataclass
@@ -115,7 +119,7 @@ class SaveSystem:
             是否保存成功
         """
         if not 1 <= slot <= self.MAX_SAVE_SLOTS:
-            print(f"无效的存档槽位: {slot}")
+            logger.warning(f"无效的存档槽位: {slot}")
             return False
         
         try:
@@ -130,11 +134,11 @@ class SaveSystem:
             with open(save_path, 'w', encoding='utf-8') as f:
                 json.dump(save_dict, f, ensure_ascii=False, indent=2)
             
-            print(f"游戏已保存到槽位 {slot}")
+            logger.info(f"游戏已保存到槽位 {slot}")
             return True
             
         except Exception as e:
-            print(f"保存游戏失败: {e}")
+            logger.error(f"保存游戏失败: {e}")
             return False
     
     def load_game(self, slot: int) -> Optional[GameSaveData]:
@@ -148,13 +152,13 @@ class SaveSystem:
             游戏存档数据，如果加载失败则返回None
         """
         if not 1 <= slot <= self.MAX_SAVE_SLOTS:
-            print(f"无效的存档槽位: {slot}")
+            logger.warning(f"无效的存档槽位: {slot}")
             return None
         
         save_path = self._get_save_path(slot)
         
         if not os.path.exists(save_path):
-            print(f"存档槽位 {slot} 不存在")
+            logger.debug(f"存档槽位 {slot} 不存在")
             return None
         
         try:
@@ -164,16 +168,16 @@ class SaveSystem:
             # 版本兼容性检查
             version = save_dict.get('version', '1.0')
             if version != GameSaveData().version:
-                print(f"警告: 存档版本 {version} 与当前版本不兼容")
+                logger.warning(f"存档版本 {version} 与当前版本不兼容")
             
             # 转换为数据类
             data = GameSaveData(**save_dict)
             
-            print(f"游戏已从槽位 {slot} 加载")
+            logger.info(f"游戏已从槽位 {slot} 加载")
             return data
             
         except Exception as e:
-            print(f"加载游戏失败: {e}")
+            logger.error(f"加载游戏失败: {e}")
             return None
     
     def delete_save(self, slot: int) -> bool:
@@ -187,22 +191,22 @@ class SaveSystem:
             是否删除成功
         """
         if not 1 <= slot <= self.MAX_SAVE_SLOTS:
-            print(f"无效的存档槽位: {slot}")
+            logger.warning(f"无效的存档槽位: {slot}")
             return False
         
         save_path = self._get_save_path(slot)
         
         if not os.path.exists(save_path):
-            print(f"存档槽位 {slot} 不存在")
+            logger.debug(f"存档槽位 {slot} 不存在")
             return False
         
         try:
             os.remove(save_path)
-            print(f"存档槽位 {slot} 已删除")
+            logger.info(f"存档槽位 {slot} 已删除")
             return True
             
         except Exception as e:
-            print(f"删除存档失败: {e}")
+            logger.error(f"删除存档失败: {e}")
             return False
     
     def get_save_info(self, slot: int) -> Optional[Dict[str, Any]]:
@@ -238,7 +242,7 @@ class SaveSystem:
             }
             
         except Exception as e:
-            print(f"获取存档信息失败: {e}")
+            logger.error(f"获取存档信息失败: {e}")
             return None
     
     def get_all_saves(self) -> List[Dict[str, Any]]:
@@ -329,11 +333,11 @@ class SaveSystem:
             with open(export_path, 'w', encoding='utf-8') as f:
                 json.dump(save_dict, f, ensure_ascii=False, indent=2)
             
-            print(f"存档已导出到: {export_path}")
+            logger.info(f"存档已导出到: {export_path}")
             return True
             
         except Exception as e:
-            print(f"导出存档失败: {e}")
+            logger.error(f"导出存档失败: {e}")
             return False
     
     def import_save(self, import_path: str, slot: int) -> bool:
@@ -348,7 +352,7 @@ class SaveSystem:
             是否导入成功
         """
         if not os.path.exists(import_path):
-            print(f"导入文件不存在: {import_path}")
+            logger.warning(f"导入文件不存在: {import_path}")
             return False
         
         try:
@@ -357,7 +361,7 @@ class SaveSystem:
             
             # 验证存档格式
             if 'version' not in save_dict:
-                print("无效的存档文件格式")
+                logger.warning("无效的存档文件格式")
                 return False
             
             # 保存到指定槽位
@@ -365,11 +369,11 @@ class SaveSystem:
             with open(save_path, 'w', encoding='utf-8') as f:
                 json.dump(save_dict, f, ensure_ascii=False, indent=2)
             
-            print(f"存档已从 {import_path} 导入到槽位 {slot}")
+            logger.info(f"存档已从 {import_path} 导入到槽位 {slot}")
             return True
             
         except Exception as e:
-            print(f"导入存档失败: {e}")
+            logger.error(f"导入存档失败: {e}")
             return False
 
 

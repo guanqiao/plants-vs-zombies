@@ -310,6 +310,11 @@ class PlantingSystem:
         self.cards: List[PlantCard] = []
         self.selected_card: Optional[PlantCard] = None
         
+        # 铲子模式
+        self.shovel_mode = False
+        self.shovel_x = 0
+        self.shovel_y = 0
+        
         # 已种植的植物位置 (row, col) -> Entity
         self.planted_positions: Dict[Tuple[int, int], Entity] = {}
         
@@ -346,29 +351,114 @@ class PlantingSystem:
         """更新种植系统"""
         for card in self.cards:
             card.update(dt, sun_count)
+        
+        # 清理已销毁的植物引用
+        self._cleanup_destroyed_plants()
+    
+    def _cleanup_destroyed_plants(self) -> None:
+        """
+        清理已销毁的植物引用
+        
+        某些植物（如樱桃炸弹）会在爆炸后自动销毁自己，
+        但 planted_positions 中仍然保留着对它们的引用。
+        这个方法会清理这些无效的引用。
+        """
+        positions_to_remove = []
+        for (row, col), entity in self.planted_positions.items():
+            should_remove = False
+            
+            # 检查1：实体是否还存在（通过检查其组件）
+            from ..ecs.components import TransformComponent, HealthComponent
+            transform = self.world.get_component(entity, TransformComponent)
+            if transform is None:
+                should_remove = True
+            else:
+                # 检查2：实体是否已死亡（HealthComponent.is_dead）
+                health = self.world.get_component(entity, HealthComponent)
+                if health and health.is_dead:
+                    should_remove = True
+            
+            if should_remove:
+                positions_to_remove.append((row, col))
+        
+        # 移除无效引用
+        for pos in positions_to_remove:
+            del self.planted_positions[pos]
     
     def handle_mouse_move(self, x: float, y: float) -> None:
         """处理鼠标移动，更新悬浮状态"""
         for card in self.cards:
             card.set_hover(card.contains_point(x, y))
+        
+        # 更新铲子位置
+        if self.shovel_mode:
+            self.shovel_x = x
+            self.shovel_y = y
     
-    def handle_mouse_press(self, x: float, y: float, sun_count: int) -> tuple[bool, bool]:
+    def handle_mouse_press(self, x: float, y: float, sun_count: int, 
+                         return_tuple: bool = False) -> bool | tuple[bool, bool, tuple[int, int] | None]:
+        """
+        处理鼠标点击
+        
+        Args:
+            x: 鼠标X坐标
+            y: 鼠标Y坐标
+            sun_count: 当前阳光数量
+            return_tuple: 是否返回元组 (向后兼容)
+            
+        Returns:
+            如果 return_tuple=True，返回 (是否处理了点击, 是否成功种植, 被移除的植物位置)
+            否则返回是否处理了点击（向后兼容）
+        """
+        result = self._handle_mouse_press_internal(x, y, sun_count)
+        if return_tuple:
+            return result
+        return result[0]
+    
+    def _handle_mouse_press_internal(self, x: float, y: float, sun_count: int) -> tuple[bool, bool, tuple[int, int] | None]:
         """
         处理鼠标点击
         
         Returns:
-            (是否处理了点击事件, 是否成功种植)
+            (是否处理了点击事件, 是否成功种植, 被移除的植物位置 (row, col) 或 None)
         """
+        # 检查是否点击了铲子按钮区域
+        shovel_x = 70
+        shovel_y = 550
+        shovel_width = 50
+        shovel_height = 80
+        if (shovel_x - shovel_width/2 <= x <= shovel_x + shovel_width/2 and
+            shovel_y - shovel_height/2 <= y <= shovel_y + shovel_height/2):
+            # 切换铲子模式
+            self.shovel_mode = not self.shovel_mode
+            if self.shovel_mode:
+                self._deselect_card()
+            return (True, False, None)
+        
+        # 如果在铲子模式
+        if self.shovel_mode:
+            grid_pos = self._get_grid_position(x, y)
+            if grid_pos:
+                row, col = grid_pos
+                if (row, col) in self.planted_positions:
+                    # 移除植物
+                    self.remove_plant(row, col)
+                    return (True, False, (row, col))
+            # 点击了其他地方，退出铲子模式
+            self.shovel_mode = False
+            return (True, False, None)
+        
         # 检查是否点击了卡片
         for card in self.cards:
             if card.contains_point(x, y):
                 if card.is_available:
                     self._select_card(card)
-                    return (True, False)  # 处理了点击，但没有种植
+                    self.shovel_mode = False
+                    return (True, False, None)  # 处理了点击，但没有种植
                 else:
                     # 不可用时触发震动效果
                     card.trigger_shake()
-                    return (False, False)
+                    return (False, False, None)
         
         # 检查是否点击了网格（种植）
         if self.selected_card:
@@ -377,13 +467,13 @@ class PlantingSystem:
                 row, col = grid_pos
                 if self._can_plant_at(row, col, sun_count):
                     self._plant_at(row, col)
-                    return (True, True)  # 处理了点击，且成功种植
+                    return (True, True, None)  # 处理了点击，且成功种植
             
             # 点击了无效位置，取消选择
             self._deselect_card()
-            return (True, False)  # 处理了点击，但没有种植
+            return (True, False, None)  # 处理了点击，但没有种植
         
-        return (False, False)
+        return (False, False, None)
     
     def _select_card(self, card: PlantCard) -> None:
         """选择卡片"""
@@ -481,6 +571,9 @@ class PlantingSystem:
     
     def render(self, mouse_x: float = 0, mouse_y: float = 0) -> None:
         """渲染种植系统UI"""
+        # 渲染铲子按钮
+        self._render_shovel_button()
+        
         # 渲染所有卡片
         for card in self.cards:
             card.render()
@@ -488,6 +581,108 @@ class PlantingSystem:
         # 渲染选中植物的预览
         if self.selected_card:
             self._render_plant_preview(mouse_x, mouse_y)
+        
+        # 渲染铲子模式的预览
+        if self.shovel_mode:
+            self._render_shovel_preview()
+    
+    def _render_shovel_button(self) -> None:
+        """渲染铲子按钮"""
+        shovel_x = 70
+        shovel_y = 550
+        shovel_width = 50
+        shovel_height = 80
+        
+        # 确定背景颜色
+        if self.shovel_mode:
+            bg_color = (180, 140, 100, 240)
+            border_color = (255, 200, 100)
+            border_width = 3
+        else:
+            bg_color = (100, 80, 60, 220)
+            border_color = (120, 100, 80)
+            border_width = 2
+        
+        # 绘制按钮背景
+        half_width = shovel_width / 2
+        half_height = shovel_height / 2
+        arcade.draw_lrbt_rectangle_filled(
+            shovel_x - half_width, shovel_x + half_width,
+            shovel_y - half_height, shovel_y + half_height,
+            bg_color
+        )
+        
+        # 绘制边框
+        arcade.draw_lrbt_rectangle_outline(
+            shovel_x - half_width, shovel_x + half_width,
+            shovel_y - half_height, shovel_y + half_height,
+            border_color, border_width
+        )
+        
+        # 绘制铲子图标
+        shovel_icon_y = shovel_y + 10
+        # 铲子手柄
+        arcade.draw_lrbt_rectangle_filled(
+            shovel_x - 3, shovel_x + 3,
+            shovel_icon_y, shovel_icon_y + 30,
+            (139, 90, 43)
+        )
+        # 铲子头部
+        arcade.draw_triangle_filled(
+            shovel_x - 10, shovel_icon_y - 5,
+            shovel_x + 10, shovel_icon_y - 5,
+            shovel_x, shovel_icon_y - 25,
+            (169, 169, 169)
+        )
+        # 铲子连接部分
+        arcade.draw_lrbt_rectangle_filled(
+            shovel_x - 4, shovel_x + 4,
+            shovel_icon_y - 5, shovel_icon_y + 5,
+            (139, 69, 19)
+        )
+        
+        # 绘制文字
+        arcade.draw_text(
+            "铲子",
+            shovel_x, shovel_y - half_height + 12,
+            arcade.color.WHITE,
+            9,
+            anchor_x="center"
+        )
+    
+    def _render_shovel_preview(self) -> None:
+        """渲染铲子模式的预览"""
+        grid_pos = self._get_grid_position(self.shovel_x, self.shovel_y)
+        if grid_pos:
+            row, col = grid_pos
+            
+            # 计算网格位置
+            x = self.GRID_START_X + col * self.CELL_WIDTH + self.CELL_WIDTH / 2
+            y = self.GRID_START_Y + row * self.CELL_HEIGHT + self.CELL_HEIGHT / 2
+            
+            # 根据是否有植物选择颜色
+            if (row, col) in self.planted_positions:
+                color = (255, 100, 100, 150)  # 红色表示可移除
+                outline_color = (255, 0, 0)
+            else:
+                color = (100, 100, 100, 100)  # 灰色表示无植物
+                outline_color = (150, 150, 150)
+            
+            # 绘制预览
+            arcade.draw_lrbt_rectangle_filled(
+                x - 35, x + 35,
+                y - 45, y + 45,
+                color
+            )
+            arcade.draw_lrbt_rectangle_outline(
+                x - 35, x + 35,
+                y - 45, y + 45,
+                outline_color, 3
+            )
+            
+            # 绘制铲子图标跟随鼠标
+            arcade.draw_circle_filled(self.shovel_x, self.shovel_y, 20, (200, 150, 100, 180))
+            arcade.draw_text("✕", self.shovel_x, self.shovel_y - 5, (255, 255, 255), 16, anchor_x="center")
     
     def _render_plant_preview(self, mouse_x: float, mouse_y: float) -> None:
         """渲染植物种植预览"""
@@ -530,6 +725,7 @@ class PlantingSystem:
             self.world.destroy_entity(entity)
         self.planted_positions.clear()
         self._deselect_card()
+        self.shovel_mode = False
     
     def register_plant_card(self, plant_type: str, cost: int, cooldown: float) -> None:
         """
@@ -607,3 +803,27 @@ class PlantingSystem:
         except KeyError:
             pass
         return None
+    
+    def select_plant_type(self, index: int) -> None:
+        """
+        通过索引选择植物卡片（用于键盘快捷键）
+        
+        Args:
+            index: 卡片索引（从0开始）
+        """
+        if 0 <= index < len(self.cards):
+            card = self.cards[index]
+            if card.is_available:
+                self._select_card(card)
+                self.shovel_mode = False
+    
+    def cancel_selection(self) -> None:
+        """取消植物选择"""
+        self._deselect_card()
+    
+    def on_mouse_motion(self, x: float, y: float) -> None:
+        """
+        处理鼠标移动（旧方法名，保持向后兼容）
+        新代码应使用 handle_mouse_move
+        """
+        self.handle_mouse_move(x, y)

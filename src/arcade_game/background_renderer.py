@@ -15,7 +15,7 @@ import random
 from typing import Tuple, List, Optional
 from dataclasses import dataclass
 
-from ..core.theme_colors import GameColors, PRIMARY, PRIMARY_LIGHT, PRIMARY_DARK, WHITE, Color
+from ..core.theme_colors import GameColors, PRIMARY, PRIMARY_LIGHT, PRIMARY_DARK, SECONDARY, SECONDARY_LIGHT, WHITE, Color
 
 
 @dataclass
@@ -109,13 +109,14 @@ class BackgroundRenderer:
         self.screen_width = screen_width
         self.screen_height = screen_height
         
-        # 网格配置
+        # 网格配置 - 与游戏窗口匹配
         self.rows = 5
         self.cols = 9
         self.cell_width = 80
         self.cell_height = 100
+        # 调整起始位置，给顶部UI留出空间
         self.start_x = 100
-        self.start_y = 50
+        self.start_y = 80  # 增加底部边距，让网格在屏幕中间偏下
         
         # 时间累积（用于动画）
         self._time = 0.0
