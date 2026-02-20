@@ -5,6 +5,7 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Optional
+from ..component import Component
 
 
 class PlantType(Enum):
@@ -24,16 +25,18 @@ class PlantType(Enum):
     SPIKEWEED = auto()
     MAGNET_SHROOM = auto()
     PUMPKIN = auto()
+    CACTUS = auto()  # 仙人掌 - 可以攻击飞行僵尸
+    CATTAIL = auto()  # 香蒲 - 可以攻击飞行僵尸
 
 
 @dataclass
-class PlantTypeComponent:
+class PlantTypeComponent(Component):
     """植物类型组件"""
     plant_type: PlantType
 
 
 @dataclass
-class PlantComponent:
+class PlantComponent(Component):
     """
     植物组件
     
