@@ -7,6 +7,10 @@
 - MeleePlantSystem: 近战类植物（大嘴花、地刺）
 - LobberPlantSystem: 投手类植物（西瓜投手、冰西瓜）
 - SupportPlantSystem: 辅助类植物（磁力菇）
+
+攻击策略模式：
+- AttackStrategy: 攻击策略基类
+- AttackStrategyRegistry: 攻击策略注册表
 """
 
 from .base_plant_system import BasePlantSystem
@@ -15,6 +19,14 @@ from .explosive_plant_system import ExplosivePlantSystem
 from .melee_plant_system import MeleePlantSystem
 from .lobber_plant_system import LobberPlantSystem
 from .support_plant_system import SupportPlantSystem
+from .attack_strategies import (
+    AttackStrategy,
+    AttackStrategyRegistry,
+    ShooterStrategy,
+    SnowPeaStrategy,
+    RepeaterStrategy,
+    ThreepeaterStrategy,
+)
 
 __all__ = [
     'BasePlantSystem',
@@ -23,4 +35,10 @@ __all__ = [
     'MeleePlantSystem',
     'LobberPlantSystem',
     'SupportPlantSystem',
+    'AttackStrategy',
+    'AttackStrategyRegistry',
+    'ShooterStrategy',
+    'SnowPeaStrategy',
+    'RepeaterStrategy',
+    'ThreepeaterStrategy',
 ]

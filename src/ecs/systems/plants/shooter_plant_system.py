@@ -6,14 +6,17 @@
 - 寒冰射手：冰冻投射物，带减速效果
 - 双发射手：一次发射两个投射物
 - 三线射手：同时攻击三行
+
+使用策略模式重构，消除复杂的if-elif链
 """
 
 from typing import TYPE_CHECKING
 from .base_plant_system import BasePlantSystem
+from .attack_strategies import AttackStrategyRegistry
 from ...component import ComponentManager
 from ...components import (
     PlantComponent, PlantType, TransformComponent,
-    GridPositionComponent, ProjectileType
+    GridPositionComponent
 )
 
 if TYPE_CHECKING:
@@ -28,6 +31,8 @@ class ShooterPlantSystem(BasePlantSystem):
     - 检测同行僵尸
     - 发射投射物
     - 管理攻击冷却
+    
+    使用策略模式，通过AttackStrategyRegistry获取对应的攻击策略
     
     Attributes:
         SHOOTER_TYPES: 射手类植物类型集合
@@ -94,7 +99,8 @@ class ShooterPlantSystem(BasePlantSystem):
         
         # 检查是否有僵尸在攻击范围内
         if self._should_shoot(plant.plant_type, grid_pos.row, component_manager):
-            self._shoot(plant_id, plant, transform, grid_pos, component_manager)
+            # 使用策略模式执行攻击
+            self._execute_attack(plant_id, plant, transform, grid_pos, component_manager)
             plant.start_attack()
     
     def _should_shoot(self, plant_type: PlantType, row: int,
@@ -117,14 +123,14 @@ class ShooterPlantSystem(BasePlantSystem):
         else:
             return self._has_zombie_in_row(row, component_manager)
     
-    def _shoot(self, plant_id: int, plant: PlantComponent,
-              transform: TransformComponent,
-              grid_pos: GridPositionComponent,
-              component_manager: ComponentManager) -> None:
+    def _execute_attack(self, plant_id: int, plant: PlantComponent,
+                       transform: TransformComponent,
+                       grid_pos: GridPositionComponent,
+                       component_manager: ComponentManager) -> None:
         """
-        发射投射物
+        执行攻击
         
-        根据植物类型发射不同的投射物
+        使用策略模式，根据植物类型获取对应的攻击策略
         
         Args:
             plant_id: 植物实体ID
@@ -133,114 +139,8 @@ class ShooterPlantSystem(BasePlantSystem):
             grid_pos: 网格位置组件
             component_manager: 组件管理器
         """
-        plant_type = plant.plant_type
-        
-        if plant_type == PlantType.THREEPEATER:
-            self._shoot_three_projectiles(transform, grid_pos)
-        elif plant_type == PlantType.REPEATER:
-            self._shoot_repeater(transform, grid_pos)
-        elif plant_type == PlantType.SNOW_PEA:
-            self._shoot_snow_pea(transform, grid_pos)
-        else:  # PEASHOOTER
-            self._shoot_peashooter(transform, grid_pos)
-    
-    def _shoot_peashooter(self, transform: TransformComponent,
-                         grid_pos: GridPositionComponent) -> None:
-        """
-        豌豆射手发射
-        
-        Args:
-            transform: 变换组件
-            grid_pos: 网格位置组件
-        """
-        self.entity_factory.create_projectile(
-            ProjectileType.PEA,
-            transform.x + 30,
-            transform.y,
-            grid_pos.row
+        strategy = AttackStrategyRegistry.get_strategy(plant.plant_type)
+        strategy.execute(
+            plant_id, plant, transform, grid_pos,
+            self.entity_factory, component_manager
         )
-    
-    def _shoot_snow_pea(self, transform: TransformComponent,
-                       grid_pos: GridPositionComponent) -> None:
-        """
-        寒冰射手发射
-        
-        发射冰冻豌豆，带减速效果
-        
-        Args:
-            transform: 变换组件
-            grid_pos: 网格位置组件
-        """
-        self.entity_factory.create_projectile(
-            ProjectileType.FROZEN_PEA,
-            transform.x + 30,
-            transform.y,
-            grid_pos.row
-        )
-    
-    def _shoot_repeater(self, transform: TransformComponent,
-                       grid_pos: GridPositionComponent) -> None:
-        """
-        双发射手发射
-        
-        一次发射两个投射物
-        
-        Args:
-            transform: 变换组件
-            grid_pos: 网格位置组件
-        """
-        # 第一个豌豆
-        self.entity_factory.create_projectile(
-            ProjectileType.PEA,
-            transform.x + 30,
-            transform.y,
-            grid_pos.row
-        )
-        # 第二个豌豆（稍微延迟）
-        self.entity_factory.create_projectile(
-            ProjectileType.PEA,
-            transform.x + 40,
-            transform.y,
-            grid_pos.row
-        )
-    
-    def _shoot_three_projectiles(self, transform: TransformComponent,
-                                grid_pos: GridPositionComponent) -> None:
-        """
-        三线射手发射
-        
-        同时向三行发射投射物
-        
-        Args:
-            transform: 变换组件
-            grid_pos: 网格位置组件
-        """
-        center_row = grid_pos.row
-        
-        # 发射到当前行
-        self.entity_factory.create_projectile(
-            ProjectileType.PEA,
-            transform.x + 30,
-            transform.y,
-            center_row
-        )
-        
-        # 发射到上一行
-        if center_row > 0:
-            y_offset = -100  # 行间距
-            self.entity_factory.create_projectile(
-                ProjectileType.PEA,
-                transform.x + 30,
-                transform.y + y_offset,
-                center_row - 1
-            )
-        
-        # 发射到下一行
-        if center_row < 4:
-            y_offset = 100
-            self.entity_factory.create_projectile(
-                ProjectileType.PEA,
-                transform.x + 30,
-                transform.y + y_offset,
-                center_row + 1
-            )
