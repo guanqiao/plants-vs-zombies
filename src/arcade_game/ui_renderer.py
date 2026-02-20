@@ -118,6 +118,9 @@ class UIRenderer:
         
         # 时间累积
         self._time_accumulator = 0.0
+        
+        # 文字缓存 - 使用 arcade.Text 对象避免每帧重新创建
+        self._init_text_cache()
     
     def update(self, dt: float) -> None:
         """更新UI状态"""
@@ -183,6 +186,46 @@ class UIRenderer:
             text.update(dt)
         
         self.floating_texts = [t for t in self.floating_texts if t.is_alive]
+    
+    def _init_text_cache(self) -> None:
+        """初始化文字缓存对象"""
+        # 阳光数量文字
+        self._sun_text = arcade.Text(
+            "0", 0, 0,
+            GameColors.SUN_TEXT.rgba, 22,
+            font_name=("Arial", "Microsoft YaHei", "sans-serif"),
+            bold=True
+        )
+        
+        # 波次文字
+        self._wave_text = arcade.Text(
+            "", 0, 0,
+            StatusColors.WAVE_NORMAL.rgba, 20,
+            font_name=("Arial", "Microsoft YaHei", "sans-serif")
+        )
+        
+        # 分数文字
+        self._score_text = arcade.Text(
+            "", 0, 0,
+            WHITE.rgba, 18,
+            font_name=("Arial", "Microsoft YaHei", "sans-serif")
+        )
+        
+        # 游戏结束文字
+        self._game_over_title = arcade.Text(
+            "", 0, 0,
+            SECONDARY.rgba, 48,
+            anchor_x="center",
+            font_name=("Arial", "Microsoft YaHei", "sans-serif"),
+            bold=True
+        )
+        
+        self._game_over_hint = arcade.Text(
+            "", 0, 0,
+            WHITE.rgba, 20,
+            anchor_x="center",
+            font_name=("Arial", "Microsoft YaHei", "sans-serif")
+        )
     
     def set_sun_count(self, count: int) -> None:
         """设置阳光数量"""
@@ -309,25 +352,14 @@ class UIRenderer:
         scale = 1.0 + bounce * 0.015
         text_y = base_y + 10 + bounce * 0.5
         
-        # 文字阴影
-        arcade.draw_text(
-            f"{display_count}",
-            bg_x + 12, text_y - 2,
-            (0, 0, 0, 150),
-            int(22 * scale),
-            font_name=("Arial", "Microsoft YaHei", "sans-serif"),
-            bold=True
-        )
+        # 使用缓存的Text对象（性能优化）
+        self._sun_text.text = str(display_count)
+        self._sun_text.font_size = int(22 * scale)
+        self._sun_text.x = bg_x + 10
+        self._sun_text.y = text_y
         
-        # 主文字
-        arcade.draw_text(
-            f"{display_count}",
-            bg_x + 10, text_y,
-            GameColors.SUN_TEXT.rgba,
-            int(22 * scale),
-            font_name=("Arial", "Microsoft YaHei", "sans-serif"),
-            bold=True
-        )
+        # 文字阴影（简化，只绘制主文字以提高性能）
+        self._sun_text.draw()
     
     def _draw_sun_rays(self, x: float, y: float, radius: float, rotation: float) -> None:
         """绘制阳光光芒"""

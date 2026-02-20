@@ -3,9 +3,11 @@
 """
 
 import arcade
+import traceback
 from ..ecs import World
+from ..core.logger import get_module_logger
 from ..ecs.systems import (
-    RenderSystem, MovementSystem, CollisionSystem,
+    RenderSystem, OptimizedRenderSystem, MovementSystem, CollisionSystem,
     HealthSystem, SunSystem, WaveSystem,
     PlantBehaviorSystem, ProjectileSystem, ZombieBehaviorSystem
 )
@@ -25,7 +27,10 @@ from .health_bar_system import HealthBarSystem
 from .damage_number_system import DamageNumberSystem
 from .screen_shake import ScreenShake
 from .ui_renderer import UIRenderer, GameOverRenderer
-from .visual_effects import VisualEffectsSystem
+from .visual_effects_optimized import OptimizedVisualEffectsSystem
+from .three_d_effects import ThreeDEffects
+from .save_system import SaveSystem, GameSaveData, get_save_system
+from ..core.performance_monitor import get_performance_monitor, toggle_debug
 
 
 class GameWindow(arcade.Window):
@@ -41,11 +46,16 @@ class GameWindow(arcade.Window):
     BACKGROUND_COLOR = (34, 139, 34)
     
     def __init__(self):
+        # 初始化日志记录器
+        self.logger = get_module_logger(__name__)
+        
         super().__init__(
             self.SCREEN_WIDTH,
             self.SCREEN_HEIGHT,
             self.SCREEN_TITLE
         )
+        
+        self.logger.info("游戏窗口初始化开始")
         
         self.sun_count = 50
         self.score = 0
@@ -62,6 +72,9 @@ class GameWindow(arcade.Window):
         self.event_bus = EventBus()
         
         self.entity_factory = EntityFactory(self.world)
+        
+        # 先创建3D效果系统，供渲染系统使用
+        self.three_d_effects = ThreeDEffects()
         
         self._init_systems()
         
@@ -86,7 +99,12 @@ class GameWindow(arcade.Window):
         # self.ui_renderer = UIRenderer(self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
         
         # 创建视觉特效系统
-        self.visual_effects = VisualEffectsSystem()
+        # 使用优化版的视觉特效系统
+        self.visual_effects = OptimizedVisualEffectsSystem()
+        
+        # 初始化存档系统
+        self.save_system = get_save_system()
+        self.play_time = 0.0
         
         self._register_event_handlers()
         
@@ -96,10 +114,13 @@ class GameWindow(arcade.Window):
         
         self._mouse_x = 0
         self._mouse_y = 0
+        
+        self.logger.info("游戏窗口初始化完成")
     
     def _init_systems(self):
         """初始化所有ECS系统"""
-        self.render_system = RenderSystem(priority=100)
+        # 使用优化版的渲染系统
+        self.render_system = OptimizedRenderSystem(priority=100, three_d_effects=self.three_d_effects)
         self.world.add_system(self.render_system)
         
         self.movement_system = MovementSystem(priority=10)
@@ -138,6 +159,7 @@ class GameWindow(arcade.Window):
         """注册事件处理器"""
         self.event_bus.subscribe(EventType.DAMAGE_DEALT, self._on_damage_dealt)
         self.event_bus.subscribe(EventType.EXPLOSION, self._on_explosion)
+        self.event_bus.subscribe(EventType.PLANT_DIED, self._on_plant_died)
     
     def _on_damage_dealt(self, event: Event):
         """处理伤害事件"""
@@ -181,7 +203,8 @@ class GameWindow(arcade.Window):
         self.screen_shake.shake(intensity, 0.3)
         
         particle_count = int(radius / 5)
-        self.particle_system.create_explosion(x, y, (255, 100, 0), particle_count)
+        from .particle_system import Color
+        self.particle_system.create_explosion(x, y, Color(255, 100, 0), particle_count)
         
         # 添加视觉特效
         if explosion_type == 'cherry_bomb':
@@ -201,48 +224,89 @@ class GameWindow(arcade.Window):
             return SoundType.POTATO_MINE
         return SoundType.EXPLOSION
     
+    def _on_plant_died(self, event: Event):
+        """处理植物死亡事件"""
+        entity_id = event.data.get('entity_id')
+        row = event.data.get('row', -1)
+        col = event.data.get('col', -1)
+        
+        # 从 planting_system 中移除植物引用
+        if row >= 0 and col >= 0:
+            if self.planting_system.is_position_occupied(row, col):
+                # 获取该位置的实体
+                plant_entity = self.planting_system.get_plant_at(row, col)
+                if plant_entity and plant_entity.id == entity_id:
+                    # 从 planted_positions 中移除
+                    del self.planting_system.planted_positions[(row, col)]
+        
+        # 销毁实体
+        try:
+            from ..ecs import Entity
+            entity = Entity()
+            entity.id = entity_id
+            self.world.destroy_entity(entity)
+        except Exception as e:
+            self.logger.warning(f"销毁植物实体失败: {e}")
+    
     def on_update(self, delta_time: float):
         """更新游戏状态"""
         if self.game_over or self.victory:
             return
         
-        # 更新ECS世界
-        self.world.update(delta_time)
-        
-        # 更新种植系统
-        self.planting_system.update(delta_time, self.sun_count)
-        
-        # 更新僵尸生成器
-        self.zombie_spawner.update(delta_time)
-        
-        # 更新阳光收集系统
-        self.sun_collection_system.update(delta_time)
-        
-        # 更新粒子系统
-        self.particle_system.update(delta_time)
-        
-        # 更新伤害数字系统
-        self.damage_number_system.update(delta_time)
-        
-        # 更新屏幕震动
-        self.screen_shake.update(delta_time)
-        
-        # 更新UI渲染器
-        # self.ui_renderer.update(delta_time)
-        # self.ui_renderer.set_sun_count(self.sun_count)
-        # self.ui_renderer.set_score(self.score)
-        
-        # 更新背景动画
-        # self.background_renderer.update(delta_time)
-        
-        # 更新视觉特效系统
-        self.visual_effects.update(delta_time)
-        
-        # 更新血条系统
-        self._update_health_bars()
-        
-        # 检查游戏结束条件
-        self._check_game_over()
+        try:
+            # 更新游戏时长
+            self.play_time += delta_time
+            
+            # 更新ECS世界
+            self.world.update(delta_time)
+            
+            # 更新种植系统
+            self.planting_system.update(delta_time, self.sun_count)
+            
+            # 更新僵尸生成器
+            self.zombie_spawner.update(delta_time)
+            
+            # 更新阳光收集系统
+            self.sun_collection_system.update(delta_time)
+            
+            # 更新粒子系统
+            self.particle_system.update(delta_time)
+            
+            # 更新伤害数字系统
+            self.damage_number_system.update(delta_time)
+            
+            # 更新屏幕震动
+            self.screen_shake.update(delta_time)
+            
+            # 更新UI渲染器
+            self.ui_renderer.update(delta_time)
+            self.ui_renderer.set_sun_count(self.sun_count)
+            self.ui_renderer.set_score(self.score)
+            
+            # 更新波次信息
+            self.ui_renderer.set_wave_info(
+                self.zombie_spawner.current_wave,
+                self.zombie_spawner.total_waves,
+                getattr(self.zombie_spawner, 'get_wave_progress', lambda: 0.0)()
+            )
+            
+            # 更新背景动画
+            self.background_renderer.update(delta_time)
+            
+            # 更新视觉特效系统
+            self.visual_effects.update(delta_time)
+            
+            # 更新3D效果系统
+            self.three_d_effects.update(delta_time)
+            
+            # 更新血条系统
+            self._update_health_bars()
+            
+            # 检查游戏结束条件
+            self._check_game_over()
+        except Exception as e:
+            self.logger.error(f"游戏更新时发生异常: {e}")
+            self.logger.error(traceback.format_exc())
     
     def _update_health_bars(self):
         """更新血条显示"""
@@ -292,18 +356,17 @@ class GameWindow(arcade.Window):
     
     def on_draw(self):
         """渲染游戏画面"""
+        # 开始性能监控帧
+        perf_monitor = get_performance_monitor()
+        perf_monitor.begin_frame()
+        
         self.clear()
         
-        # 应用屏幕震动偏移
+        # 获取屏幕震动偏移（暂时不应用）
         shake_x, shake_y = self.screen_shake.get_offset()
-        if shake_x != 0 or shake_y != 0:
-            arcade.set_viewport(
-                -shake_x, self.SCREEN_WIDTH - shake_x,
-                -shake_y, self.SCREEN_HEIGHT - shake_y
-            )
         
         # 渲染背景
-        # self.background_renderer.render()
+        self.background_renderer.render()
         
         # 渲染所有实体
         self.render_system.render(self.world._component_manager)
@@ -313,9 +376,6 @@ class GameWindow(arcade.Window):
         
         # 渲染伤害数字
         self.damage_number_system.render()
-        
-        # 渲染UI
-        self._draw_ui()
         
         # 渲染种植系统（传递鼠标位置）
         self.planting_system.render(self._mouse_x, self._mouse_y)
@@ -329,98 +389,39 @@ class GameWindow(arcade.Window):
         # 渲染视觉特效
         self.visual_effects.render()
         
+        # 渲染UI
+        self._draw_ui()
+        
         # 渲染游戏结束/胜利画面
         if self.game_over:
             self._draw_game_over()
         elif self.victory:
             self._draw_victory()
         
-        # 重置视口
-        if shake_x != 0 or shake_y != 0:
-            arcade.set_viewport(0, self.SCREEN_WIDTH, 0, self.SCREEN_HEIGHT)
+        # 更新性能监控数据
+        perf_monitor.set_entity_count(len(self.world._entity_manager._entities))
+        perf_monitor.set_particle_count(self.particle_system.get_total_particle_count())
+        
+        # 渲染性能监控信息
+        perf_monitor.render()
+        
+        # 结束性能监控帧
+        perf_monitor.end_frame()
     
     def _draw_ui(self):
         """绘制UI界面"""
         # 使用增强的UI渲染器
-        # self.ui_renderer.render()
-        
-        # 绘制简单的阳光显示
-        arcade.draw_text(
-            f"阳光: {self.sun_count}",
-            20, self.SCREEN_HEIGHT - 50,
-            arcade.color.WHITE, 24,
-            font_name=("Arial", "Microsoft YaHei", "sans-serif")
-        )
-        
-        # 绘制简单的分数显示
-        arcade.draw_text(
-            f"分数: {self.score}",
-            20, self.SCREEN_HEIGHT - 80,
-            arcade.color.WHITE, 18,
-            font_name=("Arial", "Microsoft YaHei", "sans-serif")
-        )
-        
-        # 绘制波次信息（从zombie_spawner获取）
-        # wave_info = self.zombie_spawner.get_wave_info()
-        # 更新波次状态
-        # self.ui_renderer.set_wave_info(
-        #     self.zombie_spawner.current_wave,
-        #     self.zombie_spawner.total_waves,
-        #     self.zombie_spawner.get_wave_progress() if hasattr(self.zombie_spawner, 'get_wave_progress') else 0.0
-        # )
+        self.ui_renderer.render()
     
     def _draw_game_over(self):
-        """绘制游戏结束画面"""
-        # 半透明背景
-        arcade.draw_lrbt_rectangle_filled(
-            0, self.SCREEN_WIDTH,
-            0, self.SCREEN_HEIGHT,
-            (0, 0, 0, 180)
-        )
-        
-        arcade.draw_text(
-            "游戏结束",
-            self.SCREEN_WIDTH // 2, self.SCREEN_HEIGHT // 2 + 50,
-            arcade.color.RED, 48,
-            anchor_x="center"
-        )
-        
-        arcade.draw_text(
-            "按 R 返回菜单",
-            self.SCREEN_WIDTH // 2, self.SCREEN_HEIGHT // 2 - 50,
-            arcade.color.WHITE, 24,
-            anchor_x="center"
-        )
+        """绘制游戏结束画面 - 使用增强版渲染器"""
+        self.game_over_renderer.show(False, self.score, self.zombie_spawner.current_wave)
+        self.game_over_renderer.render()
     
     def _draw_victory(self):
-        """绘制胜利画面"""
-        # 半透明背景
-        arcade.draw_lrbt_rectangle_filled(
-            0, self.SCREEN_WIDTH,
-            0, self.SCREEN_HEIGHT,
-            (0, 0, 0, 180)
-        )
-        
-        arcade.draw_text(
-            "胜利！",
-            self.SCREEN_WIDTH // 2, self.SCREEN_HEIGHT // 2 + 50,
-            arcade.color.GOLD, 48,
-            anchor_x="center"
-        )
-        
-        arcade.draw_text(
-            f"最终得分: {self.score}",
-            self.SCREEN_WIDTH // 2, self.SCREEN_HEIGHT // 2,
-            arcade.color.WHITE, 24,
-            anchor_x="center"
-        )
-        
-        arcade.draw_text(
-            "按空格键继续下一关",
-            self.SCREEN_WIDTH // 2, self.SCREEN_HEIGHT // 2 - 50,
-            arcade.color.WHITE, 24,
-            anchor_x="center"
-        )
+        """绘制胜利画面 - 使用增强版渲染器"""
+        self.game_over_renderer.show(True, self.score, self.zombie_spawner.current_wave)
+        self.game_over_renderer.render()
     
     def _check_game_over(self):
         """检查游戏是否结束"""
@@ -498,6 +499,130 @@ class GameWindow(arcade.Window):
             # 下一关
             if self.victory:
                 self.next_level()
+        elif key == arcade.key.F5:
+            # 快速保存到槽位1
+            self.save_game(1)
+        elif key == arcade.key.F9:
+            # 快速加载槽位1
+            self.load_game(1)
+        elif key == arcade.key.F3:
+            # 切换性能监控显示
+            toggle_debug()
+    
+    def save_game(self, slot: int = 1) -> bool:
+        """
+        保存游戏
+        
+        Args:
+            slot: 存档槽位
+            
+        Returns:
+            是否保存成功
+        """
+        # 先清理已销毁的植物引用
+        self.planting_system._cleanup_destroyed_plants()
+        
+        # 收集植物数据
+        plants = []
+        for (row, col), entity in self.planting_system.planted_positions.items():
+            from ..ecs.components import PlantComponent, TransformComponent
+            try:
+                plant_comp = self.world._component_manager.get_component(entity, PlantComponent)
+                transform_comp = self.world._component_manager.get_component(entity, TransformComponent)
+                if plant_comp and transform_comp:
+                    plants.append({
+                        'plant_type': plant_comp.plant_type.name,
+                        'x': transform_comp.x,
+                        'y': transform_comp.y,
+                        'row': row,
+                        'col': col,
+                        'health': plant_comp.health if hasattr(plant_comp, 'health') else 100
+                    })
+            except Exception:
+                # 如果获取组件失败，跳过这个植物
+                continue
+        
+        # 收集僵尸数据
+        zombies = []
+        from ..ecs.components import ZombieComponent, HealthComponent
+        zombie_entities = self.world._component_manager.query(TransformComponent, ZombieComponent, HealthComponent)
+        for entity_id in zombie_entities:
+            transform = self.world._component_manager.get_component(entity_id, TransformComponent)
+            zombie = self.world._component_manager.get_component(entity_id, ZombieComponent)
+            health = self.world._component_manager.get_component(entity_id, HealthComponent)
+            if transform and zombie and health:
+                zombies.append({
+                    'zombie_type': zombie.zombie_type.name if hasattr(zombie, 'zombie_type') else 'NORMAL',
+                    'x': transform.x,
+                    'y': transform.y,
+                    'health': health.current,
+                    'max_health': health.max_health
+                })
+        
+        # 创建存档数据
+        save_data = GameSaveData(
+            save_name=f"存档 {slot}",
+            current_level=self.current_level,
+            sun_count=self.sun_count,
+            score=self.score,
+            play_time=self.play_time,
+            wave_index=getattr(self.zombie_spawner, 'current_wave', 0),
+            plants=plants,
+            zombies=zombies
+        )
+        
+        # 保存
+        success = self.save_system.save_game(slot, save_data)
+        if success:
+            print(f"游戏已保存到槽位 {slot}")
+        return success
+    
+    def load_game(self, slot: int = 1) -> bool:
+        """
+        加载游戏
+        
+        Args:
+            slot: 存档槽位
+            
+        Returns:
+            是否加载成功
+        """
+        save_data = self.save_system.load_game(slot)
+        if not save_data:
+            return False
+        
+        # 重置游戏
+        self.reset_game()
+        
+        # 恢复游戏状态
+        self.current_level = save_data.current_level
+        self.sun_count = save_data.sun_count
+        self.score = save_data.score
+        self.play_time = save_data.play_time
+        
+        # 重新初始化僵尸生成器
+        self.zombie_spawner.set_level(self.current_level)
+        
+        # 恢复植物
+        for plant_data in save_data.plants:
+            try:
+                from ..ecs.components import PlantType
+                plant_type = PlantType[plant_data['plant_type']]
+                
+                # 选择对应的卡片
+                for card in self.planting_system.cards:
+                    if card.plant_type == plant_type:
+                        self.planting_system._select_card(card)
+                        
+                        # 种植植物
+                        if self.planting_system._can_plant_at(plant_data['row'], plant_data['col'], float('inf')):
+                            self.planting_system._plant_at(plant_data['row'], plant_data['col'])
+                        break
+            except Exception as e:
+                print(f"恢复植物失败: {e}")
+        
+        print(f"游戏已从槽位 {slot} 加载")
+        return True
     
     def on_mouse_press(self, x: float, y: float, button, modifiers):
         """处理鼠标点击"""
@@ -511,17 +636,26 @@ class GameWindow(arcade.Window):
             return
         
         # 处理种植
-        handled, planted = self.planting_system.handle_mouse_press(x, y, self.sun_count)
+        handled, planted, removed = self.planting_system.handle_mouse_press(x, y, self.sun_count)
         if handled:
             if planted:
                 # 播放种植音效
                 self.audio_manager.play_plant_sound()
                 # 创建种植粒子效果
                 self.particle_system.create_plant_effect(x, y)
+                # 创建种植视觉特效
+                self.visual_effects.create_planting_visual(x, y)
                 # 消耗阳光
                 cost = self.planting_system.get_planting_cost()
                 if cost > 0:
                     self.spend_sun(cost)
+            elif removed is not None:
+                # 植物被移除，创建特效
+                row, col = removed
+                cell_x = self.planting_system.GRID_START_X + col * self.planting_system.CELL_WIDTH + self.planting_system.CELL_WIDTH / 2
+                cell_y = self.planting_system.GRID_START_Y + row * self.planting_system.CELL_HEIGHT + self.planting_system.CELL_HEIGHT / 2
+                # 创建移除植物的粒子效果
+                self.particle_system.create_plant_effect(cell_x, cell_y)
             return
     
     def on_mouse_motion(self, x: float, y: float, dx: float, dy: float):

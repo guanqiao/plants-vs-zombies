@@ -6,6 +6,7 @@ ECS系统模块
 """
 
 from .render_system import RenderSystem
+from .render_system_optimized import OptimizedRenderSystem
 from .movement_system import MovementSystem
 from .collision_system import CollisionSystem
 from .plant_behavior_system import PlantBehaviorSystem
@@ -17,6 +18,7 @@ from .wave_system import WaveSystem
 
 __all__ = [
     'RenderSystem',
+    'OptimizedRenderSystem',
     'MovementSystem',
     'CollisionSystem',
     'PlantBehaviorSystem',
