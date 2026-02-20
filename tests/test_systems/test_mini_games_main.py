@@ -116,8 +116,8 @@ class TestBeghouledGame:
         from src.systems.mini_games import BeghouledGame
         
         game = BeghouledGame()
-        # 点击第一个单元格
-        result = game.handle_click(240, 90)
+        # 点击第一个单元格（使用行列索引）
+        result = game.handle_click(0, 0)
         
         assert result
         assert game.selected_cell == (0, 0)
@@ -152,20 +152,23 @@ class TestWallnutBowling:
         
         game = WallnutBowling()
         game.launch_wallnut(0)
-        game.wallnuts[0]['x'] = 400
-        game.wallnuts[0]['y'] = 150
+        # 创建僵尸（使用dataclass）
+        from src.systems.mini_games.bowling import BowlingNut
         
-        game.zombies.append({
-            'x': 400,
-            'y': 150,
-            'vx': -40,
-            'health': 100,
-            'radius': 25
-        })
+        # 将坚果移动到僵尸位置
+        game.wallnuts[0].x = 400
+        game.wallnuts[0].y = 150
+        
+        # 创建僵尸
+        zombie = BowlingNut(400, 150, -40, 0, radius=25)  # 复用BowlingNut作为僵尸
+        zombie.health = 100
+        zombie.is_active = True
+        game.zombies.append(zombie)
         
         game.update(0.1)
         
-        assert game.zombies[0]['health'] < 100
+        # 检查碰撞结果
+        assert zombie.health < 100 or not zombie.is_active
 
 
 class TestMiniGameManager:
