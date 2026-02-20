@@ -6,8 +6,10 @@ from ..system import System
 from ..component import ComponentManager
 from ..components import (
     TransformComponent, PlantComponent, GridPositionComponent,
-    ProjectileType, PlantTypeComponent, PlantType, HealthComponent
+    ProjectileType, PlantTypeComponent, PlantType, HealthComponent,
+    AnimationComponent, AnimationState
 )
+from ...core.event_bus import EventBus, Event, EventType
 
 
 class PlantBehaviorSystem(System):
@@ -23,12 +25,12 @@ class PlantBehaviorSystem(System):
     等
     """
     
-    # 射手类植物类型
+    # 射手类植物类型（单行射击）
     SHOOTER_PLANTS = {
         PlantType.PEASHOOTER,
         PlantType.SNOW_PEA,
         PlantType.REPEATER,
-        PlantType.THREEPEATER,
+        # 注意：THREEPEATER 不在此列表中，因为它需要特殊处理（三行射击）
     }
     
     # 爆炸类植物配置
@@ -43,14 +45,12 @@ class PlantBehaviorSystem(System):
     CHOMPER_DAMAGE = 1000          # 大嘴花伤害（秒杀）
     CHOMPER_CHEW_TIME = 42.0       # 大嘴花咀嚼时间（秒）
     
-    def __init__(self, entity_factory, priority: int = 40):
+    def __init__(self, entity_factory, event_bus: EventBus = None, priority: int = 40):
         super().__init__(priority)
         self.entity_factory = entity_factory
+        self.event_bus = event_bus
         
-        # 追踪特殊植物状态
-        # 格式: {entity_id: {'armed': False, 'timer': 0.0}}
         self._potato_mine_states = {}
-        # 格式: {entity_id: {'chewing': False, 'timer': 0.0}}
         self._chomper_states = {}
     
     def update(self, dt: float, component_manager: ComponentManager) -> None:
@@ -59,6 +59,9 @@ class PlantBehaviorSystem(System):
         entities = component_manager.query(
             TransformComponent, PlantComponent, GridPositionComponent
         )
+        
+        # 清理已销毁实体的状态（防止内存泄漏）
+        self._cleanup_states(entities)
         
         for entity_id in entities:
             transform = component_manager.get_component(entity_id, TransformComponent)
@@ -89,6 +92,26 @@ class PlantBehaviorSystem(System):
             # 处理攻击逻辑
             if plant.can_attack():
                 self._handle_attack(entity_id, transform, plant, grid_pos, component_manager, dt)
+    
+    def _cleanup_states(self, active_entities: list) -> None:
+        """
+        清理已销毁实体的状态
+        
+        防止内存泄漏，只保留仍然存在的实体的状态
+        """
+        active_set = set(active_entities)
+        
+        # 清理土豆雷状态
+        self._potato_mine_states = {
+            k: v for k, v in self._potato_mine_states.items() 
+            if k in active_set
+        }
+        
+        # 清理大嘴花状态
+        self._chomper_states = {
+            k: v for k, v in self._chomper_states.items() 
+            if k in active_set
+        }
     
     def _update_special_plants(self, entity_id: int, dt: float, 
                                component_manager: ComponentManager) -> None:
@@ -123,7 +146,7 @@ class PlantBehaviorSystem(System):
             # 检查同行是否有僵尸
             if self._has_zombie_in_row(grid_pos.row, component_manager):
                 # 发射投射物
-                self._shoot_projectile(transform, grid_pos, plant_type)
+                self._shoot_projectile(entity_id, transform, grid_pos, plant_type, component_manager)
                 plant.start_cooldown()
         
         # 特殊植物处理
@@ -143,6 +166,27 @@ class PlantBehaviorSystem(System):
         elif plant_type == PlantType.CHOMPER:
             # 大嘴花：吞噬僵尸
             self._chomper_eat(entity_id, transform, grid_pos, component_manager)
+        
+        elif plant_type == PlantType.THREEPEATER:
+            # 三线射手：检查三行是否有僵尸
+            if self._has_zombie_in_three_rows(grid_pos.row, component_manager):
+                # 发射三行投射物
+                self._shoot_three_projectiles(transform, grid_pos)
+                plant.start_cooldown()
+        
+        elif plant_type in (PlantType.MELON_PULT, PlantType.WINTER_MELON):
+            # 西瓜投手：抛物线攻击
+            if self._has_zombie_in_row(grid_pos.row, component_manager):
+                self._shoot_melon(transform, grid_pos, plant_type)
+                plant.start_cooldown()
+        
+        elif plant_type == PlantType.SPIKEWEED:
+            # 地刺：接触伤害
+            self._spikeweed_damage(entity_id, transform, grid_pos, component_manager)
+        
+        elif plant_type == PlantType.MAGNET_SHROOM:
+            # 磁力菇：吸走金属防具
+            self._magnet_shroom_effect(entity_id, transform, grid_pos, component_manager)
     
     def _has_zombie_in_row(self, row: int, component_manager: ComponentManager) -> bool:
         """
@@ -167,8 +211,14 @@ class PlantBehaviorSystem(System):
         
         return False
     
-    def _shoot_projectile(self, transform, grid_pos, plant_type) -> None:
+    def _shoot_projectile(self, entity_id: int, transform, grid_pos, plant_type, 
+                         component_manager: ComponentManager) -> None:
         """发射投射物"""
+        # 播放攻击动画
+        anim_comp = component_manager.get_component(entity_id, AnimationComponent)
+        if anim_comp:
+            anim_comp.play(AnimationState.ATTACK)
+        
         # 确定投射物类型
         if plant_type == PlantType.SNOW_PEA:
             projectile_type = ProjectileType.FROZEN_PEA
@@ -209,7 +259,6 @@ class PlantBehaviorSystem(System):
         
         对爆炸范围内的所有僵尸造成伤害并销毁自己
         """
-        # 获取所有僵尸
         from ..components import ZombieComponent
         zombies = component_manager.query(TransformComponent, ZombieComponent)
         
@@ -220,20 +269,40 @@ class PlantBehaviorSystem(System):
             if not zombie_transform:
                 continue
             
-            # 计算距离
             dx = zombie_transform.x - transform.x
             dy = zombie_transform.y - transform.y
             distance = (dx * dx + dy * dy) ** 0.5
             
-            # 如果在爆炸范围内
             if distance <= self.CHERRY_EXPLOSION_RADIUS:
                 zombie_health = component_manager.get_component(zombie_id, HealthComponent)
                 if zombie_health:
                     zombie_health.take_damage(self.CHERRY_EXPLOSION_DAMAGE)
-                    damaged_zombies.append(zombie_id)
+                    damaged_zombies.append((zombie_id, zombie_transform))
         
-        # 销毁樱桃炸弹
-        # 这里我们设置生命值为0来标记销毁
+        if self.event_bus:
+            self.event_bus.publish(Event(
+                EventType.EXPLOSION,
+                {
+                    'x': transform.x,
+                    'y': transform.y,
+                    'radius': self.CHERRY_EXPLOSION_RADIUS,
+                    'damage': self.CHERRY_EXPLOSION_DAMAGE,
+                    'explosion_type': 'cherry_bomb'
+                }
+            ))
+            
+            for zombie_id, zombie_transform in damaged_zombies:
+                self.event_bus.publish(Event(
+                    EventType.DAMAGE_DEALT,
+                    {
+                        'x': zombie_transform.x,
+                        'y': zombie_transform.y,
+                        'damage': self.CHERRY_EXPLOSION_DAMAGE,
+                        'damage_type': 'fire',
+                        'target_id': zombie_id
+                    }
+                ))
+        
         plant_health = component_manager.get_component(entity_id, HealthComponent)
         if plant_health:
             plant_health.take_damage(plant_health.current)
@@ -279,9 +348,10 @@ class PlantBehaviorSystem(System):
         """土豆雷爆炸"""
         from ..components import ZombieComponent
         
-        # 获取同行僵尸
         zombies = component_manager.query(TransformComponent, ZombieComponent, GridPositionComponent)
         grid_pos = component_manager.get_component(entity_id, GridPositionComponent)
+        
+        damaged_zombies = []
         
         for zombie_id in zombies:
             zombie_transform = component_manager.get_component(zombie_id, TransformComponent)
@@ -290,20 +360,42 @@ class PlantBehaviorSystem(System):
             if not zombie_transform or not zombie_grid:
                 continue
             
-            # 检查是否在同一行且距离足够近
             if zombie_grid.row == grid_pos.row:
                 dx = zombie_transform.x - transform.x
                 if abs(dx) <= self.POTATO_EXPLOSION_RADIUS:
                     zombie_health = component_manager.get_component(zombie_id, HealthComponent)
                     if zombie_health:
                         zombie_health.take_damage(self.POTATO_EXPLOSION_DAMAGE)
+                        damaged_zombies.append((zombie_id, zombie_transform))
         
-        # 销毁土豆雷
+        if self.event_bus:
+            self.event_bus.publish(Event(
+                EventType.EXPLOSION,
+                {
+                    'x': transform.x,
+                    'y': transform.y,
+                    'radius': self.POTATO_EXPLOSION_RADIUS,
+                    'damage': self.POTATO_EXPLOSION_DAMAGE,
+                    'explosion_type': 'potato_mine'
+                }
+            ))
+            
+            for zombie_id, zombie_transform in damaged_zombies:
+                self.event_bus.publish(Event(
+                    EventType.DAMAGE_DEALT,
+                    {
+                        'x': zombie_transform.x,
+                        'y': zombie_transform.y,
+                        'damage': self.POTATO_EXPLOSION_DAMAGE,
+                        'damage_type': 'fire',
+                        'target_id': zombie_id
+                    }
+                ))
+        
         plant_health = component_manager.get_component(entity_id, HealthComponent)
         if plant_health:
             plant_health.take_damage(plant_health.current)
         
-        # 清理状态
         if entity_id in self._potato_mine_states:
             del self._potato_mine_states[entity_id]
     
@@ -352,3 +444,100 @@ class PlantBehaviorSystem(System):
                     state['chewing'] = True
                     state['timer'] = self.CHOMPER_CHEW_TIME
                     break
+    
+    def _has_zombie_in_three_rows(self, row: int, component_manager: ComponentManager) -> bool:
+        """
+        检查三行（当前行和上下行）是否有僵尸
+        
+        Args:
+            row: 中心行索引
+            component_manager: 组件管理器
+            
+        Returns:
+            是否有僵尸在这三行中的任意一行
+        """
+        from ..components import ZombieComponent
+        
+        # 检查三行
+        for row_offset in [-1, 0, 1]:
+            target_row = row + row_offset
+            if 0 <= target_row < 5:  # 确保在有效范围内
+                if self._has_zombie_in_row(target_row, component_manager):
+                    return True
+        
+        return False
+    
+    def _shoot_melon(self, transform, grid_pos, plant_type) -> None:
+        """
+        发射西瓜投射物
+        
+        Args:
+            transform: 植物变换组件
+            grid_pos: 网格位置组件
+            plant_type: 植物类型（MELON_PULT或WINTER_MELON）
+        """
+        # 确定投射物类型
+        if plant_type == PlantType.WINTER_MELON:
+            projectile_type = ProjectileType.WINTER_MELON
+        else:
+            projectile_type = ProjectileType.MELON
+        
+        # 创建投射物
+        self.entity_factory.create_projectile(
+            projectile_type,
+            transform.x + 30,
+            transform.y,
+            grid_pos.row
+        )
+    
+    def _spikeweed_damage(self, entity_id: int, transform, grid_pos,
+                          component_manager: ComponentManager) -> None:
+        """
+        地刺伤害
+        
+        对站在地刺上的僵尸造成持续伤害
+        """
+        from ..components import ZombieComponent
+        
+        # 获取同行僵尸
+        zombies = component_manager.query(TransformComponent, ZombieComponent, GridPositionComponent)
+        
+        for zombie_id in zombies:
+            zombie_transform = component_manager.get_component(zombie_id, TransformComponent)
+            zombie_grid = component_manager.get_component(zombie_id, GridPositionComponent)
+            
+            if not zombie_transform or not zombie_grid:
+                continue
+            
+            # 检查是否在同一行且位置重叠
+            if zombie_grid.row == grid_pos.row:
+                dx = abs(zombie_transform.x - transform.x)
+                if dx <= 20:  # 接触范围
+                    zombie_health = component_manager.get_component(zombie_id, HealthComponent)
+                    if zombie_health:
+                        zombie_health.take_damage(20)  # 地刺伤害
+    
+    def _magnet_shroom_effect(self, entity_id: int, transform, grid_pos,
+                              component_manager: ComponentManager) -> None:
+        """
+        磁力菇效果
+        
+        吸走范围内僵尸的金属防具
+        """
+        from ..components import ZombieComponent
+        
+        # 获取所有僵尸
+        zombies = component_manager.query(TransformComponent, ZombieComponent, GridPositionComponent)
+        
+        for zombie_id in zombies:
+            zombie_comp = component_manager.get_component(zombie_id, ZombieComponent)
+            zombie_grid = component_manager.get_component(zombie_id, GridPositionComponent)
+            
+            if not zombie_comp or not zombie_grid:
+                continue
+            
+            # 检查是否有金属防具
+            if zombie_comp.has_armor and zombie_comp.armor_health > 0:
+                # 移除防具
+                zombie_comp.has_armor = False
+                zombie_comp.armor_health = 0

@@ -24,6 +24,12 @@ class SoundType(Enum):
     GAME_OVER = auto()       # 游戏结束
     VICTORY = auto()         # 胜利
     BUTTON_CLICK = auto()    # 按钮点击
+    EXPLOSION = auto()       # 爆炸
+    CHERRY_BOMB = auto()     # 樱桃炸弹
+    POTATO_MINE = auto()     # 土豆雷
+    ICE_HIT = auto()         # 冰冻击中
+    FIRE_HIT = auto()        # 火焰击中
+    SPLASH = auto()          # 溅射
 
 
 class AudioManager:
@@ -234,6 +240,30 @@ class AudioManager:
     def play_button_click_sound(self) -> None:
         """播放按钮点击音效"""
         self.play_sound(SoundType.BUTTON_CLICK)
+    
+    def play_explosion_sound(self) -> None:
+        """播放爆炸音效"""
+        self.play_sound(SoundType.EXPLOSION)
+    
+    def play_cherry_bomb_sound(self) -> None:
+        """播放樱桃炸弹音效"""
+        self.play_sound(SoundType.CHERRY_BOMB)
+    
+    def play_potato_mine_sound(self) -> None:
+        """播放土豆雷音效"""
+        self.play_sound(SoundType.POTATO_MINE)
+    
+    def play_ice_hit_sound(self) -> None:
+        """播放冰冻击中音效"""
+        self.play_sound(SoundType.ICE_HIT)
+    
+    def play_fire_hit_sound(self) -> None:
+        """播放火焰击中音效"""
+        self.play_sound(SoundType.FIRE_HIT)
+    
+    def play_splash_sound(self) -> None:
+        """播放溅射音效"""
+        self.play_sound(SoundType.SPLASH)
 
 
 # 全局音效管理器实例

@@ -2,10 +2,11 @@
 冷却组件 - 用于植物卡片冷却系统
 """
 from dataclasses import dataclass, field
+from ..component import Component
 
 
 @dataclass
-class CooldownComponent:
+class CooldownComponent(Component):
     """
     冷却组件 - 管理植物卡片的冷却时间
     

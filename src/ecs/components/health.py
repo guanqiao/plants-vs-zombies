@@ -3,10 +3,11 @@
 """
 
 from dataclasses import dataclass, field
+from ..component import Component
 
 
 @dataclass
-class HealthComponent:
+class HealthComponent(Component):
     """
     生命值组件
     

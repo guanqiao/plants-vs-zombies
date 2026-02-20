@@ -4,10 +4,11 @@
 
 from dataclasses import dataclass
 from typing import Set
+from ..component import Component
 
 
 @dataclass
-class CollisionComponent:
+class CollisionComponent(Component):
     """
     碰撞组件
     

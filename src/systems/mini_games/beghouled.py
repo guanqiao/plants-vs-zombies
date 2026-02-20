@@ -18,7 +18,7 @@ class BeghouledGame(BaseMiniGame):
     MATCH_MIN = 3  # 最小连线数
     
     def __init__(self):
-        super().__init__(MiniGameType.BEGHOULED)
+        super().__init__()
         self.grid: List[List[Optional[str]]] = [[None for _ in range(self.GRID_SIZE)] for _ in range(self.GRID_SIZE)]
         self.selected_cell: Optional[Tuple[int, int]] = None
         self.score = 0
@@ -44,6 +44,10 @@ class BeghouledGame(BaseMiniGame):
             self._remove_matches(matches)
             self._fill_empty_cells()
     
+    def _find_matches(self):
+        """查找所有连线（别名方法，用于兼容测试）"""
+        return self._find_all_matches()
+    
     def handle_click(self, row: int, col: int) -> bool:
         """
         处理点击事件
@@ -55,7 +59,7 @@ class BeghouledGame(BaseMiniGame):
         Returns:
             True if 操作有效
         """
-        if not self.is_running:
+        if not self.running:
             return False
         
         if self.selected_cell is None:
@@ -245,3 +249,41 @@ class BeghouledGame(BaseMiniGame):
     def get_selected_cell(self) -> Optional[Tuple[int, int]]:
         """获取当前选中的格子"""
         return self.selected_cell
+    
+    def render(self, screen):
+        """渲染游戏画面"""
+        import arcade
+        
+        # 绘制背景
+        arcade.draw_rectangle_filled(450, 300, 900, 600, (100, 100, 150))
+        
+        # 绘制网格
+        cell_size = 60
+        start_x = 100
+        start_y = 100
+        
+        for row in range(self.GRID_SIZE):
+            for col in range(self.GRID_SIZE):
+                x = start_x + col * cell_size
+                y = start_y + row * cell_size
+                
+                # 绘制格子背景
+                color = (150, 150, 200) if (row + col) % 2 == 0 else (130, 130, 180)
+                arcade.draw_rectangle_filled(x, y, cell_size - 2, cell_size - 2, color)
+                
+                # 绘制选中的格子
+                if self.selected_cell == (row, col):
+                    arcade.draw_rectangle_outline(x, y, cell_size - 2, cell_size - 2, (255, 255, 0), 3)
+                
+                # 绘制植物
+                plant = self.grid[row][col]
+                if plant:
+                    plant_colors = {
+                        'peashooter': (0, 200, 0),
+                        'sunflower': (255, 255, 0),
+                        'wallnut': (139, 69, 19),
+                        'cherry_bomb': (200, 0, 0),
+                        'snow_pea': (0, 200, 200)
+                    }
+                    color = plant_colors.get(plant, (150, 150, 150))
+                    arcade.draw_circle_filled(x, y, 20, color)

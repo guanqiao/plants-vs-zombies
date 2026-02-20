@@ -16,6 +16,8 @@ from .projectile import ProjectileComponent, ProjectileTypeComponent, Projectile
 from .collision import CollisionComponent
 from .attack import AttackComponent
 from .sun import SunProducerComponent
+from .cooldown import CooldownComponent
+from .animation_component import AnimationComponent, AnimationState
 
 __all__ = [
     'TransformComponent',
@@ -38,4 +40,7 @@ __all__ = [
     'CollisionComponent',
     'AttackComponent',
     'SunProducerComponent',
+    'CooldownComponent',
+    'AnimationComponent',
+    'AnimationState',
 ]

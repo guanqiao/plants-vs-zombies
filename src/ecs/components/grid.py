@@ -3,10 +3,11 @@
 """
 
 from dataclasses import dataclass
+from ..component import Component
 
 
 @dataclass
-class GridPositionComponent:
+class GridPositionComponent(Component):
     """
     网格位置组件
     

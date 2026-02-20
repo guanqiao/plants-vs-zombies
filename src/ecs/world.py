@@ -96,3 +96,4 @@ class World:
         """清空整个世界"""
         self._system_manager.clear()
         self._entity_manager.clear()
+        self._component_manager.clear()

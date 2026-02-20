@@ -184,6 +184,111 @@ class PerformanceConfig:
     MONITOR_HISTORY_SIZE: int = 60  # 性能监控历史记录大小
 
 
+@dataclass(frozen=True)
+class CombatConfig:
+    """
+    战斗配置
+    
+    战斗相关的数值配置
+    """
+    # 投射物
+    PROJECTILE_SPAWN_OFFSET_X: float = 30.0
+    PROJECTILE_HIT_DISTANCE: float = 30.0
+    PROJECTILE_DESPAWN_X: float = 900.0
+    
+    # 僵尸攻击
+    ZOMBIE_ATTACK_RANGE: float = 40.0
+    ZOMBIE_WIN_X: float = 200.0
+    ZOMBIE_WIN_SPAWN_X: float = 100.0
+    
+    # 撑杆跳
+    POLE_VAULT_RANGE: float = 120.0
+    POLE_VAULT_LANDING_OFFSET: float = 50.0
+    POLE_VAULT_SPEED_BOOST: float = -30.0
+    
+    # 巨人僵尸
+    GARGANTUAR_THROW_HEALTH_THRESHOLD: float = 0.5
+    GARGANTUAR_SMASH_DAMAGE: int = 1000
+    
+    # 蹦极僵尸
+    BUNGEE_STEAL_TIME: float = 3.0
+    
+    # 三线射手
+    THREEPEATER_ROW_OFFSET: float = 100.0
+    THREEPEATER_MIN_ROW: int = 0
+    THREEPEATER_MAX_ROW: int = 4
+    
+    # 西瓜投手
+    MELON_SPLASH_RADIUS: float = 50.0
+
+
+@dataclass(frozen=True)
+class DifficultyConfig:
+    """
+    难度配置
+    
+    不同难度等级影响阳光获取、僵尸强度等
+    """
+    # 难度等级名称
+    name: str
+    
+    # 初始阳光
+    initial_sun: int
+    
+    # 天空阳光生成间隔（秒）- 越小阳光越多
+    auto_sun_spawn_interval: float
+    
+    # 每个阳光的价值
+    sun_value: int
+    
+    # 向日葵产生阳光间隔（秒）- 越小产生越快
+    sunflower_production_interval: float
+    
+    # 僵尸移动速度倍率
+    zombie_speed_multiplier: float
+    
+    # 僵尸生命值倍率
+    zombie_health_multiplier: float
+    
+    # 僵尸生成速度倍率
+    zombie_spawn_rate_multiplier: float
+
+
+# 定义三种难度
+EASY = DifficultyConfig(
+    name="简单",
+    initial_sun=150,
+    auto_sun_spawn_interval=5.0,      # 5秒一个天空阳光
+    sun_value=50,                      # 每个阳光50
+    sunflower_production_interval=12.0, # 向日葵12秒产生一次
+    zombie_speed_multiplier=0.8,
+    zombie_health_multiplier=0.8,
+    zombie_spawn_rate_multiplier=0.7
+)
+
+NORMAL = DifficultyConfig(
+    name="普通",
+    initial_sun=100,
+    auto_sun_spawn_interval=8.0,
+    sun_value=25,
+    sunflower_production_interval=24.0,
+    zombie_speed_multiplier=1.0,
+    zombie_health_multiplier=1.0,
+    zombie_spawn_rate_multiplier=1.0
+)
+
+HARD = DifficultyConfig(
+    name="困难",
+    initial_sun=50,
+    auto_sun_spawn_interval=12.0,
+    sun_value=25,
+    sunflower_production_interval=30.0,
+    zombie_speed_multiplier=1.3,
+    zombie_health_multiplier=1.5,
+    zombie_spawn_rate_multiplier=1.3
+)
+
+
 # 导出所有配置实例
 GRID = GridConfig()
 SCREEN = ScreenConfig()
@@ -195,3 +300,5 @@ SUN = SunConfig()
 AUDIO = AudioConfig()
 SAVE = SaveConfig()
 PERFORMANCE = PerformanceConfig()
+COMBAT = CombatConfig()
+DIFFICULTY = NORMAL  # 默认普通难度

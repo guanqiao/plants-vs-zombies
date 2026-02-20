@@ -5,6 +5,7 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Optional, List
+from ..component import Component
 
 
 class ZombieType(Enum):
@@ -26,13 +27,13 @@ class ZombieType(Enum):
 
 
 @dataclass
-class ZombieTypeComponent:
+class ZombieTypeComponent(Component):
     """僵尸类型组件"""
     zombie_type: ZombieType
 
 
 @dataclass
-class ZombieComponent:
+class ZombieComponent(Component):
     """
     僵尸组件
     
@@ -88,6 +89,9 @@ class ZombieComponent:
     # 蹦极僵尸
     bungee_timer: float = 0.0
     bungee_target: Optional[int] = None
+    
+    # 巨人僵尸
+    imp_thrown: bool = False
     
     def update_timer(self, dt: float) -> None:
         """更新攻击计时器"""

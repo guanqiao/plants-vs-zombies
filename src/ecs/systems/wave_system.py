@@ -90,7 +90,7 @@ class WaveSystem(System):
         self.wave_index = 0
         self.timer = 0.0
         self.waves = self.LEVEL_CONFIGS.get(level, {}).get('waves', [])
-        self.complete = False
+        self.complete = len(self.waves) == 0
         self.zombies_to_spawn = []
     
     def update(self, dt: float, component_manager: ComponentManager) -> None:

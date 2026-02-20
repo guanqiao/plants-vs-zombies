@@ -21,6 +21,28 @@ class BowlingNut:
     vy: float
     radius: float = 20
     is_active: bool = True
+    row: int = 0  # 所在行
+    health: int = 100  # 生命值
+    
+    def __getitem__(self, key):
+        """支持字典式访问"""
+        return getattr(self, key)
+    
+    def __setitem__(self, key, value):
+        """支持字典式赋值"""
+        setattr(self, key, value)
+    
+    @property
+    def is_alive(self) -> bool:
+        """是否存活"""
+        return self.health > 0 and self.is_active
+    
+    @is_alive.setter
+    def is_alive(self, value: bool):
+        """设置存活状态"""
+        if not value:
+            self.health = 0
+            self.is_active = False
     
     def update(self, dt: float):
         """更新坚果位置"""
@@ -160,3 +182,36 @@ class WallnutBowling(BaseMiniGame):
             return True
         
         return False
+    
+    @property
+    def wallnuts(self) -> list:
+        """获取所有坚果列表"""
+        return self.nuts
+    
+    @property
+    def wallnuts_left(self) -> int:
+        """获取剩余坚果数量"""
+        return self.nuts_remaining
+    
+    def launch_wallnut(self, row: int) -> bool:
+        """
+        在指定行发射坚果
+        
+        Args:
+            row: 行索引 (0-4)
+            
+        Returns:
+            True if 发射成功
+        """
+        if self.nuts_remaining <= 0:
+            return False
+        
+        # 计算Y坐标
+        y = 150 + row * 100
+        
+        # 创建坚果
+        nut = BowlingNut(50, y, 300, 0, row=row)
+        self.nuts.append(nut)
+        self.nuts_remaining -= 1
+        
+        return True

@@ -22,7 +22,7 @@ class TestSunCollectionSystem:
         self.collected_amounts = []
         self.sun_system.register_collection_callback(self._on_sun_collected)
     
-    def _on_sun_collected(self, amount: int):
+    def _on_sun_collected(self, amount: int, x: float, y: float):
         """收集回调"""
         self.collected_amounts.append(amount)
     
@@ -169,7 +169,7 @@ class TestSunCollectionSystemIntegration:
         self.collected_amounts = []
         self.sun_system.register_collection_callback(self._on_sun_collected)
     
-    def _on_sun_collected(self, amount: int):
+    def _on_sun_collected(self, amount: int, x: float, y: float):
         """收集回调"""
         self.collected_amounts.append(amount)
     

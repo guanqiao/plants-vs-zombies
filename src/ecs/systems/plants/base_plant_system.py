@@ -5,7 +5,7 @@
 """
 
 from typing import List, Optional, TYPE_CHECKING
-from ..system import System
+from ...system import System
 from ...component import ComponentManager
 from ...components import (
     TransformComponent, PlantComponent, ZombieComponent,

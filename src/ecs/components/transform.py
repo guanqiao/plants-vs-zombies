@@ -3,10 +3,11 @@
 """
 
 from dataclasses import dataclass
+from ..component import Component
 
 
 @dataclass
-class TransformComponent:
+class TransformComponent(Component):
     """
     变换组件
     

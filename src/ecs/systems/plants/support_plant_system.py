@@ -141,7 +141,7 @@ class SupportPlantSystem(BasePlantSystem):
             
             if zombie_transform:
                 distance = ((zombie_transform.x - x) ** 2 + 
-                           (zombie_transform.y - y) ** 2) ** 0.5)
+                           (zombie_transform.y - y) ** 2) ** 0.5
                 
                 if distance <= radius:
                     zombies.append(zombie_id)

@@ -3,10 +3,11 @@
 """
 
 from dataclasses import dataclass
+from ..component import Component
 
 
 @dataclass
-class SunProducerComponent:
+class SunProducerComponent(Component):
     """
     阳光生产组件
     

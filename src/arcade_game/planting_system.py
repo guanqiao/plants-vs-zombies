@@ -2,25 +2,49 @@
 种植系统 - 处理植物种植的所有逻辑
 
 包括：
-- 植物卡片UI
+- 植物卡片UI（带动画效果）
 - 鼠标点击种植
 - 阳光消耗验证
 - 网格位置检查
 """
 
+import os
+import math
 from typing import Optional, Dict, List, Tuple
 import arcade
 from ..ecs import World, Entity
 from ..ecs.components import PlantType, PLANT_CONFIGS
 from .entity_factory import EntityFactory
+from .sprite_manager import get_sprite_manager
 
 
 class PlantCard:
     """
     植物卡片类
     
-    表示UI上的一个植物选择卡片
+    表示UI上的一个植物选择卡片，带有增强的视觉效果
     """
+    
+    PLANT_SPRITE_FILES = {
+        'PEASHOOTER': 'peashooter.png',
+        'SUNFLOWER': 'sunflower.png',
+        'WALLNUT': 'wallnut.png',
+        'CHERRY_BOMB': 'cherry_bomb.png',
+        'SNOW_PEA': 'snow_pea.png',
+        'REPEATER': 'repeater.png',
+        'CHOMPER': 'chomper.png',
+        'POTATO_MINE': 'potato_mine.png',
+    }
+    
+    # 卡片颜色配置
+    CARD_BG_AVAILABLE = (60, 80, 60, 230)
+    CARD_BG_UNAVAILABLE = (40, 40, 40, 200)
+    CARD_BG_HOVER = (80, 100, 80, 240)
+    CARD_BORDER_NORMAL = (100, 100, 100)
+    CARD_BORDER_SELECTED = (255, 220, 50)
+    CARD_BORDER_HOVER = (150, 180, 150)
+    SUN_COST_COLOR = (255, 220, 50)
+    COOLDAY_OVERLAY = (0, 0, 0, 150)
     
     def __init__(self, plant_type: PlantType, x: float, y: float, 
                  width: float = 60, height: float = 80):
@@ -37,18 +61,54 @@ class PlantCard:
         
         self.is_selected = False
         self.is_available = True
+        self.is_hovered = False
         self.cooldown_timer = 0.0
         self.cooldown_duration = config.get('attack_cooldown', 1.5)
+        
+        # 动画状态
+        self._scale = 1.0
+        self._target_scale = 1.0
+        self._glow_intensity = 0.0
+        self._shake_offset = 0.0
+        self._time = 0.0
+        
+        self._texture = self._load_texture()
+    
+    def _load_texture(self) -> Optional[arcade.Texture]:
+        """加载植物精灵图纹理"""
+        sprite_manager = get_sprite_manager()
+        
+        # 获取文件名
+        filename = self.PLANT_SPRITE_FILES.get(self.plant_type.name)
+        if not filename:
+            return None
+        
+        # 构建完整路径
+        texture_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            'assets', 'sprites', 'plants', filename
+        )
+        
+        # 加载纹理
+        if os.path.exists(texture_path):
+            try:
+                texture_name = f"planting_card_{self.plant_type.name.lower()}"
+                return sprite_manager.load_texture(texture_name, texture_path)
+            except Exception:
+                pass
+        return None
     
     def contains_point(self, px: float, py: float) -> bool:
         """检查点是否在卡片内"""
-        half_width = self.width / 2
-        half_height = self.height / 2
+        half_width = self.width / 2 * self._scale
+        half_height = self.height / 2 * self._scale
         return (self.x - half_width <= px <= self.x + half_width and
                 self.y - half_height <= py <= self.y + half_height)
     
     def update(self, dt: float, sun_count: int) -> None:
         """更新卡片状态"""
+        self._time += dt
+        
         # 更新冷却
         if self.cooldown_timer > 0:
             self.cooldown_timer -= dt
@@ -56,73 +116,175 @@ class PlantCard:
                 self.cooldown_timer = 0
         
         # 检查是否可用（阳光足够且不在冷却）
+        was_available = self.is_available
         self.is_available = (sun_count >= self.cost and 
                             self.cooldown_timer <= 0)
+        
+        # 如果刚变得可用，触发动画
+        if self.is_available and not was_available:
+            self._target_scale = 1.15
+            self._glow_intensity = 1.0
+        
+        # 更新动画状态
+        self._update_animations(dt)
+    
+    def _update_animations(self, dt: float) -> None:
+        """更新动画状态"""
+        # 缩放动画（弹性效果）
+        scale_diff = self._target_scale - self._scale
+        self._scale += scale_diff * 0.15
+        if abs(scale_diff) < 0.01:
+            self._scale = self._target_scale
+            if self._target_scale > 1.0:
+                self._target_scale = 1.0
+        
+        # 发光衰减
+        self._glow_intensity *= 0.92
+        if self._glow_intensity < 0.01:
+            self._glow_intensity = 0.0
+        
+        # 震动衰减
+        self._shake_offset *= 0.85
+        if abs(self._shake_offset) < 0.1:
+            self._shake_offset = 0.0
+    
+    def set_hover(self, is_hovered: bool) -> None:
+        """设置悬浮状态"""
+        if is_hovered != self.is_hovered:
+            self.is_hovered = is_hovered
+            if is_hovered and self.is_available:
+                self._target_scale = 1.08
+            else:
+                self._target_scale = 1.0
+    
+    def trigger_shake(self) -> None:
+        """触发震动效果（用于不可用时点击）"""
+        self._shake_offset = 5.0
     
     def start_cooldown(self) -> None:
         """开始冷却"""
         self.cooldown_timer = self.cooldown_duration
+        self._target_scale = 1.0
+        self._scale = 1.0
     
     def render(self) -> None:
         """渲染卡片"""
-        half_width = self.width / 2
-        half_height = self.height / 2
+        # 计算缩放后的尺寸
+        scaled_width = self.width * self._scale
+        scaled_height = self.height * self._scale
+        half_width = scaled_width / 2
+        half_height = scaled_height / 2
         
-        # 背景色（根据可用性变化）
-        if self.is_available:
-            bg_color = self.color
-            alpha = 255
+        # 应用震动偏移
+        render_x = self.x + self._shake_offset
+        render_y = self.y
+        
+        # 绘制发光效果
+        if self._glow_intensity > 0:
+            glow_size = 5 + self._glow_intensity * 10
+            glow_alpha = int(100 * self._glow_intensity)
+            arcade.draw_lrbt_rectangle_filled(
+                render_x - half_width - glow_size, render_x + half_width + glow_size,
+                render_y - half_height - glow_size, render_y + half_height + glow_size,
+                (255, 255, 100, glow_alpha)
+            )
+        
+        # 确定背景颜色
+        if not self.is_available:
+            bg_color = self.CARD_BG_UNAVAILABLE
+        elif self.is_hovered or self.is_selected:
+            bg_color = self.CARD_BG_HOVER
         else:
-            bg_color = (100, 100, 100)  # 灰色表示不可用
-            alpha = 150
+            bg_color = self.CARD_BG_AVAILABLE
         
         # 绘制卡片背景
-        arcade.draw_lrtb_rectangle_filled(
-            self.x - half_width, self.x + half_width,
-            self.y + half_height, self.y - half_height,
-            (*bg_color, alpha)
+        arcade.draw_lrbt_rectangle_filled(
+            render_x - half_width, render_x + half_width,
+            render_y - half_height, render_y + half_height,
+            bg_color
         )
         
-        # 绘制选中边框
+        # 绘制边框
         if self.is_selected:
-            arcade.draw_lrtb_rectangle_outline(
-                self.x - half_width, self.x + half_width,
-                self.y + half_height, self.y - half_height,
-                arcade.color.YELLOW, 3
+            border_color = self.CARD_BORDER_SELECTED
+            border_width = 3
+            # 选中时添加脉冲效果
+            pulse = 0.5 + 0.5 * math.sin(self._time * 5)
+            pulse_alpha = int(100 * pulse)
+            arcade.draw_lrbt_rectangle_outline(
+                render_x - half_width - 2, render_x + half_width + 2,
+                render_y - half_height - 2, render_y + half_height + 2,
+                (*self.CARD_BORDER_SELECTED[:3], pulse_alpha), 2
             )
+        elif self.is_hovered and self.is_available:
+            border_color = self.CARD_BORDER_HOVER
+            border_width = 2
         else:
-            arcade.draw_lrtb_rectangle_outline(
-                self.x - half_width, self.x + half_width,
-                self.y + half_height, self.y - half_height,
-                arcade.color.BLACK, 2
+            border_color = self.CARD_BORDER_NORMAL
+            border_width = 1
+        
+        arcade.draw_lrbt_rectangle_outline(
+            render_x - half_width, render_x + half_width,
+            render_y - half_height, render_y + half_height,
+            border_color, border_width
+        )
+        
+        # 绘制植物图标区域
+        icon_y = render_y + half_height * 0.2
+        icon_size = 20 * self._scale
+        arcade.draw_circle_filled(
+            render_x, icon_y, icon_size,
+            self.color if self.is_available else (80, 80, 80)
+        )
+        # 添加高光
+        if self.is_available:
+            arcade.draw_circle_filled(
+                render_x - icon_size * 0.3, icon_y + icon_size * 0.3,
+                icon_size * 0.3,
+                (min(255, self.color[0] + 50), min(255, self.color[1] + 50), min(255, self.color[2] + 50))
             )
         
         # 绘制植物名称（简化显示）
+        name_y = render_y + half_height - 12 * self._scale
         arcade.draw_text(
-            self.name[:4],  # 显示前4个字符
-            self.x, self.y + half_height - 15,
-            arcade.color.WHITE, 10,
+            self.name[:4],
+            render_x, name_y,
+            arcade.color.WHITE if self.is_available else (150, 150, 150),
+            int(9 * self._scale),
             anchor_x="center"
         )
         
         # 绘制阳光成本
+        cost_y = render_y - half_height + 12 * self._scale
+        cost_color = self.SUN_COST_COLOR if self.is_available else (100, 100, 100)
         arcade.draw_text(
             f"{self.cost}",
-            self.x, self.y - half_height + 10,
-            arcade.color.YELLOW, 12,
-            anchor_x="center"
+            render_x, cost_y,
+            cost_color,
+            int(11 * self._scale),
+            anchor_x="center",
+            bold=True
         )
         
         # 绘制冷却遮罩
         if self.cooldown_timer > 0:
             cooldown_percent = self.cooldown_timer / self.cooldown_duration
-            cooldown_height = self.height * cooldown_percent
+            cooldown_height = scaled_height * cooldown_percent
             
-            arcade.draw_lrtb_rectangle_filled(
-                self.x - half_width, self.x + half_width,
-                self.y - half_height + cooldown_height, self.y - half_height,
-                (0, 0, 0, 180)
+            arcade.draw_lrbt_rectangle_filled(
+                render_x - half_width, render_x + half_width,
+                render_y - half_height, render_y - half_height + cooldown_height,
+                self.COOLDAY_OVERLAY
             )
+            
+            # 绘制冷却进度条
+            progress_width = scaled_width * (1.0 - cooldown_percent)
+            if progress_width > 0:
+                arcade.draw_lrbt_rectangle_filled(
+                    render_x - half_width, render_x - half_width + progress_width,
+                    render_y - half_height - 3, render_y - half_height,
+                    (100, 200, 100)
+                )
 
 
 class PlantingSystem:
@@ -185,20 +347,28 @@ class PlantingSystem:
         for card in self.cards:
             card.update(dt, sun_count)
     
-    def handle_mouse_press(self, x: float, y: float, sun_count: int) -> bool:
+    def handle_mouse_move(self, x: float, y: float) -> None:
+        """处理鼠标移动，更新悬浮状态"""
+        for card in self.cards:
+            card.set_hover(card.contains_point(x, y))
+    
+    def handle_mouse_press(self, x: float, y: float, sun_count: int) -> tuple[bool, bool]:
         """
         处理鼠标点击
         
         Returns:
-            是否处理了点击事件
+            (是否处理了点击事件, 是否成功种植)
         """
         # 检查是否点击了卡片
         for card in self.cards:
             if card.contains_point(x, y):
                 if card.is_available:
                     self._select_card(card)
-                    return True
-                return False
+                    return (True, False)  # 处理了点击，但没有种植
+                else:
+                    # 不可用时触发震动效果
+                    card.trigger_shake()
+                    return (False, False)
         
         # 检查是否点击了网格（种植）
         if self.selected_card:
@@ -207,13 +377,13 @@ class PlantingSystem:
                 row, col = grid_pos
                 if self._can_plant_at(row, col, sun_count):
                     self._plant_at(row, col)
-                    return True
+                    return (True, True)  # 处理了点击，且成功种植
             
             # 点击了无效位置，取消选择
             self._deselect_card()
-            return True
+            return (True, False)  # 处理了点击，但没有种植
         
-        return False
+        return (False, False)
     
     def _select_card(self, card: PlantCard) -> None:
         """选择卡片"""
@@ -309,7 +479,7 @@ class PlantingSystem:
         """检查位置是否被占用"""
         return (row, col) in self.planted_positions
     
-    def render(self) -> None:
+    def render(self, mouse_x: float = 0, mouse_y: float = 0) -> None:
         """渲染种植系统UI"""
         # 渲染所有卡片
         for card in self.cards:
@@ -317,13 +487,10 @@ class PlantingSystem:
         
         # 渲染选中植物的预览
         if self.selected_card:
-            self._render_plant_preview()
+            self._render_plant_preview(mouse_x, mouse_y)
     
-    def _render_plant_preview(self) -> None:
+    def _render_plant_preview(self, mouse_x: float, mouse_y: float) -> None:
         """渲染植物种植预览"""
-        # 获取鼠标位置
-        mouse_x, mouse_y = arcade.get_mouse_position()
-        
         # 检查是否在网格上
         grid_pos = self._get_grid_position(mouse_x, mouse_y)
         if grid_pos:
@@ -340,11 +507,15 @@ class PlantingSystem:
                 color = (*self.selected_card.color[:3], 100)  # 半透明植物色
             
             # 绘制预览
-            arcade.draw_rectangle_filled(
-                x, y, 60, 80, color
+            arcade.draw_lrbt_rectangle_filled(
+                x - 30, x + 30,
+                y - 40, y + 40,
+                color
             )
-            arcade.draw_rectangle_outline(
-                x, y, 60, 80, arcade.color.WHITE, 2
+            arcade.draw_lrbt_rectangle_outline(
+                x - 30, x + 30,
+                y - 40, y + 40,
+                arcade.color.WHITE, 2
             )
     
     def get_planting_cost(self) -> int:

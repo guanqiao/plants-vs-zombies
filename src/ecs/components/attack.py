@@ -4,10 +4,11 @@
 
 from dataclasses import dataclass
 from typing import Optional
+from ..component import Component
 
 
 @dataclass
-class AttackComponent:
+class AttackComponent(Component):
     """
     攻击组件
     

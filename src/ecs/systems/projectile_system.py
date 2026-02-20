@@ -8,6 +8,7 @@ from ..components import (
     TransformComponent, ProjectileComponent, GridPositionComponent,
     VelocityComponent, HealthComponent, ZombieComponent
 )
+from ...core.event_bus import EventBus, Event, EventType
 
 
 class ProjectileSystem(System):
@@ -21,9 +22,10 @@ class ProjectileSystem(System):
     - 减速效果
     """
     
-    def __init__(self, entity_manager, priority: int = 25):
+    def __init__(self, entity_manager, event_bus: EventBus = None, priority: int = 25):
         super().__init__(priority)
         self.entity_manager = entity_manager
+        self.event_bus = event_bus
     
     def update(self, dt: float, component_manager: ComponentManager) -> None:
         """更新投射物"""
@@ -58,7 +60,6 @@ class ProjectileSystem(System):
     def _check_collision(self, entity_id: int, transform, projectile, grid_pos,
                          component_manager: ComponentManager) -> bool:
         """检查投射物是否击中僵尸"""
-        # 获取同行的所有僵尸
         zombies = component_manager.query(TransformComponent, ZombieComponent, GridPositionComponent)
         
         for zombie_id in zombies:
@@ -68,24 +69,20 @@ class ProjectileSystem(System):
             if not zombie_transform or not zombie_grid:
                 continue
             
-            # 检查是否同行
             if zombie_grid.row != grid_pos.row:
                 continue
             
-            # 检查距离
             distance = abs(zombie_transform.x - transform.x)
-            if distance < 30:  # 碰撞阈值
-                # 造成伤害
-                self._apply_damage(zombie_id, projectile, component_manager)
+            if distance < 30:
+                self._apply_damage(zombie_id, projectile, zombie_transform, component_manager)
                 return True
         
-        # 检查是否超出屏幕
         if transform.x > 900:
             return True
         
         return False
     
-    def _apply_damage(self, zombie_id: int, projectile, 
+    def _apply_damage(self, zombie_id: int, projectile, zombie_transform,
                       component_manager: ComponentManager) -> None:
         """应用伤害"""
         health = component_manager.get_component(zombie_id, HealthComponent)
@@ -95,31 +92,38 @@ class ProjectileSystem(System):
             return
         
         damage = projectile.damage
+        damage_type = "normal"
         
-        # 处理护甲
+        if projectile.applies_slow:
+            damage_type = "ice"
+        
         if zombie.has_armor:
             damage = zombie.take_armor_damage(damage)
         
-        # 应用伤害
         if damage > 0:
             health.take_damage(damage)
         
-        # 应用减速效果
         if projectile.applies_slow:
             zombie.apply_slow(projectile.slow_factor, projectile.slow_duration)
         
-        # 处理溅射伤害
         if projectile.is_splash:
-            self._apply_splash_damage(zombie_id, projectile, component_manager)
+            self._apply_splash_damage(zombie_id, projectile, zombie_transform, component_manager)
+        
+        if self.event_bus and damage > 0:
+            self.event_bus.publish(Event(
+                EventType.DAMAGE_DEALT,
+                {
+                    'x': zombie_transform.x,
+                    'y': zombie_transform.y,
+                    'damage': damage,
+                    'damage_type': damage_type,
+                    'target_id': zombie_id
+                }
+            ))
     
-    def _apply_splash_damage(self, target_id: int, projectile,
+    def _apply_splash_damage(self, target_id: int, projectile, target_transform,
                              component_manager: ComponentManager) -> None:
         """应用溅射伤害"""
-        target_transform = component_manager.get_component(target_id, TransformComponent)
-        if not target_transform:
-            return
-        
-        # 获取范围内的所有僵尸
         zombies = component_manager.query(TransformComponent, ZombieComponent, HealthComponent)
         
         for zombie_id in zombies:
@@ -130,11 +134,23 @@ class ProjectileSystem(System):
             if not zombie_transform:
                 continue
             
-            # 检查距离
             distance = ((zombie_transform.x - target_transform.x) ** 2 + 
                        (zombie_transform.y - target_transform.y) ** 2) ** 0.5
             
             if distance <= projectile.splash_radius:
                 zombie_health = component_manager.get_component(zombie_id, HealthComponent)
                 if zombie_health:
-                    zombie_health.take_damage(projectile.damage)
+                    splash_damage = int(projectile.damage * 0.5)
+                    zombie_health.take_damage(splash_damage)
+                    
+                    if self.event_bus:
+                        self.event_bus.publish(Event(
+                            EventType.DAMAGE_DEALT,
+                            {
+                                'x': zombie_transform.x,
+                                'y': zombie_transform.y,
+                                'damage': splash_damage,
+                                'damage_type': 'fire',
+                                'target_id': zombie_id
+                            }
+                        ))

@@ -5,10 +5,11 @@
 from dataclasses import dataclass
 from typing import Tuple, Optional
 import arcade
+from ..component import Component
 
 
 @dataclass
-class SpriteComponent:
+class SpriteComponent(Component):
     """
     精灵组件
     

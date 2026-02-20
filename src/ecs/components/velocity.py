@@ -3,10 +3,11 @@
 """
 
 from dataclasses import dataclass
+from ..component import Component
 
 
 @dataclass
-class VelocityComponent:
+class VelocityComponent(Component):
     """
     速度组件
     

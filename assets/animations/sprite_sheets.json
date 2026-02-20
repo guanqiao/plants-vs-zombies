@@ -1,0 +1,172 @@
+{
+  "version": "2.0",
+  "description": "精灵表配置文件 - 对标原版PVZ风格",
+  "sprite_sheets": {
+    "peashooter": {
+      "idle": {
+        "sheet_path": "images/plants/peashooter_idle_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/plants/peashooter_attack_sheet.png",
+        "frames": 4,
+        "frame_width": 90,
+        "frame_height": 90,
+        "fps": 12,
+        "loop": false,
+        "columns": 4,
+        "event_frame": 1
+      }
+    },
+    "sunflower": {
+      "idle": {
+        "sheet_path": "images/plants/sunflower_idle_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 8,
+        "loop": true,
+        "columns": 4
+      }
+    },
+    "snow_pea": {
+      "idle": {
+        "sheet_path": "images/plants/snowpea_idle_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/plants/snowpea_attack_sheet.png",
+        "frames": 4,
+        "frame_width": 90,
+        "frame_height": 90,
+        "fps": 12,
+        "loop": false,
+        "columns": 4,
+        "event_frame": 1
+      }
+    },
+    "cherry_bomb": {
+      "idle": {
+        "sheet_path": "images/plants/cherry_bomb_idle_sheet.png",
+        "frames": 4,
+        "frame_width": 80,
+        "frame_height": 90,
+        "fps": 8,
+        "loop": true,
+        "columns": 4
+      },
+      "explode": {
+        "sheet_path": "images/plants/cherry_bomb_explode_sheet.png",
+        "frames": 6,
+        "frame_width": 120,
+        "frame_height": 120,
+        "fps": 15,
+        "loop": false,
+        "columns": 4
+      }
+    },
+    "potato_mine": {
+      "buried": {
+        "sheet_path": "images/plants/potato_mine_buried_sheet.png",
+        "frames": 4,
+        "frame_width": 60,
+        "frame_height": 50,
+        "fps": 6,
+        "loop": true,
+        "columns": 4
+      },
+      "armed": {
+        "sheet_path": "images/plants/potato_mine_armed_sheet.png",
+        "frames": 4,
+        "frame_width": 60,
+        "frame_height": 70,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      }
+    },
+    "zombie_normal": {
+      "walk": {
+        "sheet_path": "images/zombies/zombie_normal_walk_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 12,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/zombies/zombie_normal_attack_sheet.png",
+        "frames": 4,
+        "frame_width": 80,
+        "frame_height": 100,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      }
+    },
+    "zombie_cone": {
+      "walk": {
+        "sheet_path": "images/zombies/zombie_cone_walk_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 110,
+        "fps": 12,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/zombies/zombie_cone_attack_sheet.png",
+        "frames": 4,
+        "frame_width": 80,
+        "frame_height": 110,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      }
+    },
+    "zombie_bucket": {
+      "walk": {
+        "sheet_path": "images/zombies/zombie_bucket_walk_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 110,
+        "fps": 12,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/zombies/zombie_bucket_attack_sheet.png",
+        "frames": 4,
+        "frame_width": 80,
+        "frame_height": 110,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      }
+    }
+  },
+  "legacy_fallback": {
+    "enabled": true,
+    "paths": {
+      "peashooter": "images/plants/peashooter.png",
+      "sunflower": "images/plants/sunflower.png",
+      "snow_pea": "images/plants/peashooter.png",
+      "cherry_bomb": "images/plants/peashooter.png",
+      "potato_mine": "images/plants/wallnut.png",
+      "zombie_normal": "images/zombies/zombie_normal.png",
+      "zombie_cone": "images/zombies/zombie_normal.png",
+      "zombie_bucket": "images/zombies/zombie_normal.png"
+    }
+  }
+}

@@ -35,11 +35,32 @@ class ZombieSpawner:
         self.spawn_timer = 0.0
         self.spawn_interval = 2.0  # 僵尸生成间隔（秒）
         
+        # 难度倍率
+        self.speed_multiplier = 1.0
+        self.health_multiplier = 1.0
+        self.spawn_rate_multiplier = 1.0
+        
         # 当前波次待生成的僵尸队列
         self.zombie_queue: List[Tuple[ZombieType, int]] = []
         
         # 波次配置
         self.wave_configs = self._init_wave_configs()
+    
+    def set_difficulty(self, speed_multiplier: float, health_multiplier: float, 
+                       spawn_rate_multiplier: float) -> None:
+        """
+        设置难度倍率
+        
+        Args:
+            speed_multiplier: 僵尸速度倍率
+            health_multiplier: 僵尸生命值倍率
+            spawn_rate_multiplier: 僵尸生成速度倍率
+        """
+        self.speed_multiplier = speed_multiplier
+        self.health_multiplier = health_multiplier
+        self.spawn_rate_multiplier = spawn_rate_multiplier
+        # 调整生成间隔（倍率越高，间隔越短）
+        self.spawn_interval = 2.0 / spawn_rate_multiplier
     
     def _init_wave_configs(self) -> dict:
         """初始化波次配置"""
@@ -177,12 +198,14 @@ class ZombieSpawner:
         # 计算Y坐标
         y = self.GRID_START_Y + row * self.CELL_HEIGHT + self.CELL_HEIGHT / 2
         
-        # 创建僵尸
+        # 创建僵尸（应用难度倍率）
         return self.entity_factory.create_zombie(
             zombie_type,
             self.SPAWN_X,
             y,
-            row
+            row,
+            speed_multiplier=self.speed_multiplier,
+            health_multiplier=self.health_multiplier
         )
     
     def is_wave_complete(self) -> bool:
@@ -217,6 +240,41 @@ class ZombieSpawner:
             return "最后一波！"
         
         return f"波次: {self.wave_index + 1}/{total_waves}"
+    
+    @property
+    def current_wave(self) -> int:
+        """获取当前波次"""
+        return self.wave_index + 1
+    
+    @property
+    def total_waves(self) -> int:
+        """获取总波次数"""
+        config = self.wave_configs.get(self.current_level)
+        if not config:
+            return 0
+        return len(config['waves'])
+    
+    def get_wave_progress(self) -> float:
+        """获取波次进度 (0-1)"""
+        config = self.wave_configs.get(self.current_level)
+        if not config:
+            return 0.0
+        
+        total_waves = len(config['waves'])
+        if total_waves == 0:
+            return 0.0
+        
+        # 计算已完成波次 + 当前波次进度
+        wave_progress = self.wave_index / total_waves
+        
+        # 如果当前波次有僵尸在队列中，计算该波次的进度
+        if self.zombie_queue:
+            total_in_wave = sum(count for _, count in self.zombie_queue)
+            # 假设每波最多10个僵尸
+            wave_internal_progress = 1.0 - (total_in_wave / 10.0)
+            wave_progress += wave_internal_progress / total_waves
+        
+        return min(1.0, wave_progress)
     
     def get_zombies_remaining(self) -> int:
         """获取剩余僵尸数量"""

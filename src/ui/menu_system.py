@@ -451,6 +451,142 @@ class PauseMenu(BaseMenu):
             button.render()
 
 
+class DifficultySelectMenu(BaseMenu):
+    """
+    难度选择菜单
+    
+    选择游戏难度
+    """
+    
+    def __init__(self, window_width: float, window_height: float,
+                 on_difficulty_selected: Callable[[str], None],
+                 on_back: Callable):
+        """
+        初始化难度选择菜单
+        
+        Args:
+            window_width: 窗口宽度
+            window_height: 窗口高度
+            on_difficulty_selected: 难度选择回调，参数为难度标识 'easy', 'normal', 'hard'
+            on_back: 返回回调
+        """
+        super().__init__(window_width, window_height)
+        self.on_difficulty_selected = on_difficulty_selected
+        self.on_back = on_back
+        self.selected_difficulty = "normal"
+        
+        # 难度描述
+        self.difficulty_descriptions = {
+            "easy": {
+                "name": "简单",
+                "color": (100, 200, 100),
+                "desc": "初始阳光: 150 | 阳光价值: 50 | 僵尸较弱"
+            },
+            "normal": {
+                "name": "普通",
+                "color": (200, 200, 100),
+                "desc": "初始阳光: 100 | 阳光价值: 25 | 标准体验"
+            },
+            "hard": {
+                "name": "困难",
+                "color": (200, 100, 100),
+                "desc": "初始阳光: 50 | 阳光价值: 25 | 僵尸更强"
+            }
+        }
+        
+    def setup(self):
+        """设置难度选择菜单按钮"""
+        self.buttons.clear()
+        
+        center_x = self.window_width / 2
+        start_y = self.window_height / 2 + 80
+        spacing = 70
+        
+        # 简单难度按钮
+        easy_button = MenuButton(
+            "简单", center_x, start_y,
+            callback=lambda: self._select_difficulty("easy")
+        )
+        easy_button.color_normal = (100, 180, 100)
+        easy_button.color_hover = (120, 220, 120)
+        self.buttons.append(easy_button)
+        
+        # 普通难度按钮
+        normal_button = MenuButton(
+            "普通", center_x, start_y - spacing,
+            callback=lambda: self._select_difficulty("normal")
+        )
+        normal_button.color_normal = (180, 180, 100)
+        normal_button.color_hover = (220, 220, 120)
+        self.buttons.append(normal_button)
+        
+        # 困难难度按钮
+        hard_button = MenuButton(
+            "困难", center_x, start_y - spacing * 2,
+            callback=lambda: self._select_difficulty("hard")
+        )
+        hard_button.color_normal = (180, 100, 100)
+        hard_button.color_hover = (220, 120, 120)
+        self.buttons.append(hard_button)
+        
+        # 返回按钮
+        self.buttons.append(MenuButton(
+            "返回", center_x, start_y - spacing * 3 - 20,
+            callback=self.on_back
+        ))
+    
+    def _select_difficulty(self, difficulty: str):
+        """处理难度选择"""
+        self.selected_difficulty = difficulty
+        if self.on_difficulty_selected:
+            self.on_difficulty_selected(difficulty)
+    
+    def render(self):
+        """渲染难度选择菜单"""
+        if not self.is_visible:
+            return
+        
+        # 绘制背景
+        arcade.draw_rectangle_filled(
+            self.window_width / 2, self.window_height / 2,
+            self.window_width, self.window_height,
+            (50, 80, 50)
+        )
+        
+        # 绘制标题
+        arcade.draw_text(
+            "选择难度",
+            self.window_width / 2, self.window_height - 80,
+            (255, 255, 255), 36,
+            anchor_x="center", anchor_y="center"
+        )
+        
+        # 绘制按钮
+        for button in self.buttons:
+            button.render()
+        
+        # 绘制难度说明
+        desc_y = 120
+        arcade.draw_text(
+            "简单：初始阳光150，阳光价值50，僵尸较弱",
+            self.window_width / 2, desc_y,
+            (150, 220, 150), 14,
+            anchor_x="center", anchor_y="center"
+        )
+        arcade.draw_text(
+            "普通：初始阳光100，阳光价值25，标准体验",
+            self.window_width / 2, desc_y - 20,
+            (220, 220, 150), 14,
+            anchor_x="center", anchor_y="center"
+        )
+        arcade.draw_text(
+            "困难：初始阳光50，阳光价值25，僵尸更强更快",
+            self.window_width / 2, desc_y - 40,
+            (220, 150, 150), 14,
+            anchor_x="center", anchor_y="center"
+        )
+
+
 class GameOverMenu(BaseMenu):
     """
     游戏结束菜单
@@ -571,10 +707,12 @@ class MenuSystem:
         self.on_resume: Optional[Callable] = None
         self.on_restart: Optional[Callable] = None
         self.on_main_menu: Optional[Callable] = None
+        self.on_difficulty_selected: Optional[Callable[[str], None]] = None
         
         # 菜单实例
         self.main_menu: Optional[MainMenu] = None
         self.level_select_menu: Optional[LevelSelectMenu] = None
+        self.difficulty_select_menu: Optional[DifficultySelectMenu] = None
         self.pause_menu: Optional[PauseMenu] = None
         self.game_over_menu: Optional[GameOverMenu] = None
         
@@ -597,6 +735,13 @@ class MenuSystem:
             self.window_width, self.window_height,
             self._on_level_selected,
             self._on_back_to_main
+        )
+        
+        # 难度选择菜单
+        self.difficulty_select_menu = DifficultySelectMenu(
+            self.window_width, self.window_height,
+            self._on_difficulty_selected,
+            self._on_back_to_main_from_difficulty
         )
         
         # 暂停菜单
@@ -624,6 +769,11 @@ class MenuSystem:
         self.level_select_menu.max_unlocked_level = max_unlocked_level
         self.current_menu = self.level_select_menu
         self.level_select_menu.show()
+    
+    def show_difficulty_select(self):
+        """显示难度选择菜单"""
+        self.current_menu = self.difficulty_select_menu
+        self.difficulty_select_menu.show()
     
     def show_pause_menu(self):
         """显示暂停菜单"""
@@ -659,8 +809,8 @@ class MenuSystem:
     
     # 回调函数包装器
     def _on_start_game(self):
-        if self.on_start_game:
-            self.on_start_game()
+        # 先显示难度选择菜单
+        self.show_difficulty_select()
     
     def _on_level_select(self):
         if self.on_level_select:
@@ -675,10 +825,20 @@ class MenuSystem:
             self.on_quit()
     
     def _on_level_selected(self, level: int):
-        if self.on_level_select:
-            self.on_level_select(level)
+        # 选择关卡后也显示难度选择
+        self._pending_level = level
+        self.show_difficulty_select()
+    
+    def _on_difficulty_selected(self, difficulty: str):
+        """难度选择回调"""
+        if self.on_difficulty_selected:
+            self.on_difficulty_selected(difficulty)
     
     def _on_back_to_main(self):
+        self.show_main_menu()
+    
+    def _on_back_to_main_from_difficulty(self):
+        """从难度选择返回"""
         self.show_main_menu()
     
     def _on_resume(self):

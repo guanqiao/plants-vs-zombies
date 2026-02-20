@@ -51,9 +51,29 @@ class MiniGameManager:
         self._current_game = None
         self._game_type = None
     
-    def get_current_game(self) -> Optional[BaseMiniGame]:
+    @property
+    def current_game(self) -> Optional[BaseMiniGame]:
         """
         获取当前小游戏
+        
+        Returns:
+            当前小游戏实例或None
+        """
+        return self._current_game
+    
+    @property
+    def game_type(self) -> Optional[MiniGameType]:
+        """
+        获取当前小游戏类型
+        
+        Returns:
+            当前小游戏类型或None
+        """
+        return self._game_type
+    
+    def get_current_game(self) -> Optional[BaseMiniGame]:
+        """
+        获取当前小游戏（方法版本）
         
         Returns:
             当前小游戏实例或None
@@ -69,4 +89,46 @@ class MiniGameManager:
         """
         return self._game_type
     
-    def is_game_running(self) ->
+    def is_game_running(self) -> bool:
+        """
+        检查是否有小游戏正在运行
+        
+        Returns:
+            True if 有游戏在运行
+        """
+        return self._current_game is not None
+    
+    def update(self, dt: float) -> None:
+        """
+        更新当前小游戏
+        
+        Args:
+            dt: 时间增量（秒）
+        """
+        if self._current_game:
+            self._current_game.update(dt)
+    
+    def render(self, screen) -> None:
+        """
+        渲染当前小游戏
+        
+        Args:
+            screen: 屏幕表面
+        """
+        if self._current_game:
+            self._current_game.render(screen)
+    
+    def handle_click(self, x: int, y: int) -> bool:
+        """
+        处理鼠标点击
+        
+        Args:
+            x: 鼠标X坐标
+            y: 鼠标Y坐标
+            
+        Returns:
+            True if 点击被处理
+        """
+        if self._current_game:
+            return self._current_game.handle_click(x, y)
+        return False

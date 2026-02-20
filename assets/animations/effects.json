@@ -1,0 +1,131 @@
+{
+  "version": "1.0",
+  "description": "特效资源配置文件",
+  "effects": {
+    "sun": {
+      "spin": {
+        "sheet_path": "images/effects/sun_spin_sheet.png",
+        "frames": 8,
+        "frame_width": 50,
+        "frame_height": 50,
+        "fps": 12,
+        "loop": true,
+        "columns": 4
+      },
+      "collect": {
+        "sheet_path": "images/effects/sun_collect_sheet.png",
+        "frames": 6,
+        "frame_width": 40,
+        "frame_height": 40,
+        "fps": 15,
+        "loop": false,
+        "columns": 4
+      }
+    },
+    "hit": {
+      "normal": {
+        "sheet_path": "images/effects/hit_normal_sheet.png",
+        "frames": 5,
+        "frame_width": 30,
+        "frame_height": 30,
+        "fps": 20,
+        "loop": false,
+        "columns": 4
+      },
+      "crit": {
+        "sheet_path": "images/effects/hit_crit_sheet.png",
+        "frames": 6,
+        "frame_width": 40,
+        "frame_height": 40,
+        "fps": 18,
+        "loop": false,
+        "columns": 4
+      },
+      "frozen": {
+        "sheet_path": "images/effects/hit_frozen_sheet.png",
+        "frames": 6,
+        "frame_width": 35,
+        "frame_height": 35,
+        "fps": 18,
+        "loop": false,
+        "columns": 4
+      }
+    },
+    "explosion": {
+      "default": {
+        "sheet_path": "images/effects/explosion_sheet.png",
+        "frames": 8,
+        "frame_width": 60,
+        "frame_height": 60,
+        "fps": 15,
+        "loop": false,
+        "columns": 4
+      },
+      "smoke": {
+        "sheet_path": "images/effects/smoke_sheet.png",
+        "frames": 6,
+        "frame_width": 50,
+        "frame_height": 50,
+        "fps": 10,
+        "loop": false,
+        "columns": 4
+      }
+    },
+    "status": {
+      "frozen": {
+        "sheet_path": "images/effects/status_frozen_sheet.png",
+        "frames": 8,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      },
+      "slow": {
+        "sheet_path": "images/effects/status_slow_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 8,
+        "loop": true,
+        "columns": 4
+      }
+    },
+    "other": {
+      "plant_ground": {
+        "sheet_path": "images/effects/plant_ground_sheet.png",
+        "frames": 5,
+        "frame_width": 60,
+        "frame_height": 40,
+        "fps": 15,
+        "loop": false,
+        "columns": 4
+      },
+      "zombie_death": {
+        "sheet_path": "images/effects/zombie_death_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 40,
+        "fps": 10,
+        "loop": false,
+        "columns": 4
+      }
+    }
+  },
+  "effect_mappings": {
+    "projectile_hit": {
+      "PEA": "hit.normal",
+      "FROZEN_PEA": "hit.frozen",
+      "MELON": "hit.normal",
+      "WINTER_MELON": "hit.frozen"
+    },
+    "plant_effect": {
+      "CHERRY_BOMB": "explosion.default",
+      "POTATO_MINE": "explosion.default"
+    },
+    "status_effect": {
+      "FROZEN": "status.frozen",
+      "SLOWED": "status.slow"
+    }
+  }
+}

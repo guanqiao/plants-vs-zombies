@@ -17,6 +17,7 @@ from ..ecs.components import (
 )
 from ..core.event_bus import EventBus, Event, EventType
 from ..core.game_state import GameStateManager, GameState
+from ..core.game_constants import EASY, NORMAL, HARD
 from ..ui.menu_system import MenuSystem
 from .entity_factory import EntityFactory
 from .planting_system import PlantingSystem
@@ -107,10 +108,15 @@ class GameWindowWithMenus(arcade.Window):
         self.menu_system.on_resume = self._on_menu_resume
         self.menu_system.on_restart = self._on_menu_restart
         self.menu_system.on_main_menu = self._on_menu_main_menu
+        self.menu_system.on_difficulty_selected = self._on_difficulty_selected
     
-    def _init_game_components(self, level: int = 1):
+    def _init_game_components(self, level: int = 1, difficulty: str = "normal"):
         """初始化游戏组件"""
         self.current_level = level
+        self.current_difficulty = difficulty
+        
+        # 根据难度获取配置
+        difficulty_config = self._get_difficulty_config(difficulty)
         
         # 创建ECS世界
         self.world = World()
@@ -130,10 +136,20 @@ class GameWindowWithMenus(arcade.Window):
         # 创建僵尸生成器
         self.zombie_spawner = ZombieSpawner(self.world, self.entity_factory)
         self.zombie_spawner.set_level(self.current_level)
+        self.zombie_spawner.set_difficulty(
+            difficulty_config.zombie_speed_multiplier,
+            difficulty_config.zombie_health_multiplier,
+            difficulty_config.zombie_spawn_rate_multiplier
+        )
         
         # 创建阳光收集系统
         self.sun_collection_system = SunCollectionSystem(self.world, self.entity_factory)
         self.sun_collection_system.register_collection_callback(self._on_sun_collected)
+        # 设置难度相关配置
+        self.sun_collection_system.set_difficulty_config(
+            difficulty_config.auto_sun_spawn_interval,
+            difficulty_config.sun_value
+        )
         
         # 创建音效管理器
         self.audio_manager = get_audio_manager()
@@ -165,9 +181,18 @@ class GameWindowWithMenus(arcade.Window):
         # 注册僵尸死亡回调
         self.zombie_behavior_system.register_death_callback(self._on_zombie_death)
         
-        # 重置游戏数据
-        self.sun_count = 50
+        # 重置游戏数据（根据难度设置初始阳光）
+        self.sun_count = difficulty_config.initial_sun
         self.score = 0
+    
+    def _get_difficulty_config(self, difficulty: str):
+        """获取难度配置"""
+        if difficulty == "easy":
+            return EASY
+        elif difficulty == "hard":
+            return HARD
+        else:
+            return NORMAL
     
     def _init_systems(self):
         """初始化所有ECS系统"""
@@ -216,9 +241,9 @@ class GameWindowWithMenus(arcade.Window):
         """游戏状态改变回调"""
         print(f"游戏状态: {old_state.name} -> {new_state.name}")
     
-    def _on_start_game(self, level):
+    def _on_start_game(self, level, difficulty):
         """开始游戏回调"""
-        self._init_game_components(level)
+        self._init_game_components(level, difficulty)
         self.menu_system.hide_current_menu()
     
     def _on_pause(self):
@@ -231,7 +256,7 @@ class GameWindowWithMenus(arcade.Window):
     
     def _on_restart(self):
         """重新开始回调"""
-        self._init_game_components(self.current_level)
+        self._init_game_components(self.current_level, self.current_difficulty)
         self.menu_system.hide_current_menu()
     
     def _on_quit(self):
@@ -267,6 +292,14 @@ class GameWindowWithMenus(arcade.Window):
         """菜单返回主菜单"""
         self.game_state.go_to_main_menu()
         self.menu_system.show_main_menu()
+    
+    def _on_difficulty_selected(self, difficulty: str):
+        """难度选择回调"""
+        # 保存当前选择的难度
+        self.current_difficulty = difficulty
+        # 开始游戏（使用当前关卡或默认关卡1）
+        level = getattr(self.menu_system, '_pending_level', 1)
+        self.game_state.start_game(level, difficulty)
     
     def on_update(self, delta_time: float):
         """更新游戏状态"""

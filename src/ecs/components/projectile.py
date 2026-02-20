@@ -4,6 +4,7 @@
 
 from dataclasses import dataclass
 from enum import Enum, auto
+from ..component import Component
 
 
 class ProjectileType(Enum):
@@ -17,13 +18,13 @@ class ProjectileType(Enum):
 
 
 @dataclass
-class ProjectileTypeComponent:
+class ProjectileTypeComponent(Component):
     """投射物类型组件"""
     projectile_type: ProjectileType
 
 
 @dataclass
-class ProjectileComponent:
+class ProjectileComponent(Component):
     """
     投射物组件
     

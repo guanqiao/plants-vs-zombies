@@ -5,12 +5,13 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Type, TYPE_CHECKING
+from typing import Dict, TYPE_CHECKING
 from ...component import ComponentManager
 from ...components import (
     PlantComponent, PlantType, TransformComponent,
     GridPositionComponent, ProjectileType
 )
+from ....core.game_constants import COMBAT
 
 if TYPE_CHECKING:
     from ....arcade_game.entity_factory import EntityFactory
@@ -57,7 +58,7 @@ class ShooterStrategy(AttackStrategy):
         """发射普通投射物"""
         entity_factory.create_projectile(
             ProjectileType.PEA,
-            transform.x + 30,
+            transform.x + COMBAT.PROJECTILE_SPAWN_OFFSET_X,
             transform.y,
             grid_pos.row
         )
@@ -75,7 +76,7 @@ class SnowPeaStrategy(AttackStrategy):
         """发射冰冻投射物"""
         entity_factory.create_projectile(
             ProjectileType.FROZEN_PEA,
-            transform.x + 30,
+            transform.x + COMBAT.PROJECTILE_SPAWN_OFFSET_X,
             transform.y,
             grid_pos.row
         )
@@ -84,6 +85,9 @@ class SnowPeaStrategy(AttackStrategy):
 
 class RepeaterStrategy(AttackStrategy):
     """双发射手策略"""
+    
+    # 第二个豌豆的额外偏移
+    SECOND_PROJECTILE_OFFSET: float = 10.0
     
     def execute(self, plant_id: int, plant: PlantComponent,
                 transform: TransformComponent,
@@ -94,14 +98,14 @@ class RepeaterStrategy(AttackStrategy):
         # 第一个豌豆
         entity_factory.create_projectile(
             ProjectileType.PEA,
-            transform.x + 30,
+            transform.x + COMBAT.PROJECTILE_SPAWN_OFFSET_X,
             transform.y,
             grid_pos.row
         )
         # 第二个豌豆（稍微延迟）
         entity_factory.create_projectile(
             ProjectileType.PEA,
-            transform.x + 40,
+            transform.x + COMBAT.PROJECTILE_SPAWN_OFFSET_X + self.SECOND_PROJECTILE_OFFSET,
             transform.y,
             grid_pos.row
         )
@@ -122,27 +126,27 @@ class ThreepeaterStrategy(AttackStrategy):
         # 发射到当前行
         entity_factory.create_projectile(
             ProjectileType.PEA,
-            transform.x + 30,
+            transform.x + COMBAT.PROJECTILE_SPAWN_OFFSET_X,
             transform.y,
             center_row
         )
         
         # 发射到上一行
-        if center_row > 0:
-            y_offset = -100
+        if center_row > COMBAT.THREEPEATER_MIN_ROW:
+            y_offset = -COMBAT.THREEPEATER_ROW_OFFSET
             entity_factory.create_projectile(
                 ProjectileType.PEA,
-                transform.x + 30,
+                transform.x + COMBAT.PROJECTILE_SPAWN_OFFSET_X,
                 transform.y + y_offset,
                 center_row - 1
             )
         
         # 发射到下一行
-        if center_row < 4:
-            y_offset = 100
+        if center_row < COMBAT.THREEPEATER_MAX_ROW:
+            y_offset = COMBAT.THREEPEATER_ROW_OFFSET
             entity_factory.create_projectile(
                 ProjectileType.PEA,
-                transform.x + 30,
+                transform.x + COMBAT.PROJECTILE_SPAWN_OFFSET_X,
                 transform.y + y_offset,
                 center_row + 1
             )
@@ -161,7 +165,7 @@ class MelonPultStrategy(AttackStrategy):
         """发射西瓜"""
         entity_factory.create_projectile(
             ProjectileType.MELON,
-            transform.x + 30,
+            transform.x + COMBAT.PROJECTILE_SPAWN_OFFSET_X,
             transform.y,
             grid_pos.row
         )
@@ -179,7 +183,7 @@ class WinterMelonStrategy(AttackStrategy):
         """发射冰冻西瓜"""
         entity_factory.create_projectile(
             ProjectileType.WINTER_MELON,
-            transform.x + 30,
+            transform.x + COMBAT.PROJECTILE_SPAWN_OFFSET_X,
             transform.y,
             grid_pos.row
         )

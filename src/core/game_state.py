@@ -30,6 +30,7 @@ class GameStateManager:
         previous_state: 上一个游戏状态
         current_level: 当前关卡
         max_unlocked_level: 最大解锁关卡
+        current_difficulty: 当前难度等级
     """
     
     def __init__(self):
@@ -39,14 +40,16 @@ class GameStateManager:
         self.current_level = 1
         self.max_unlocked_level = 1
         self.score = 0
+        self.current_difficulty = "normal"  # 默认普通难度
         
         # 状态改变回调
         self.on_state_change: Optional[Callable[[GameState, GameState], None]] = None
-        self.on_start_game: Optional[Callable[[int], None]] = None
+        self.on_start_game: Optional[Callable[[int, str], None]] = None
         self.on_pause: Optional[Callable[[], None]] = None
         self.on_resume: Optional[Callable[[], None]] = None
         self.on_restart: Optional[Callable[[], None]] = None
         self.on_quit: Optional[Callable[[], None]] = None
+        self.on_difficulty_change: Optional[Callable[[str], None]] = None
     
     def change_state(self, new_state: GameState) -> None:
         """
@@ -89,18 +92,31 @@ class GameStateManager:
         """检查是否胜利"""
         return self.current_state == GameState.VICTORY
     
-    def start_game(self, level: int = 1) -> None:
+    def start_game(self, level: int = 1, difficulty: str = "normal") -> None:
         """
         开始游戏
         
         Args:
             level: 关卡号
+            difficulty: 难度等级 ('easy', 'normal', 'hard')
         """
         self.current_level = level
+        self.current_difficulty = difficulty
         self.change_state(GameState.PLAYING)
         
         if self.on_start_game:
-            self.on_start_game(level)
+            self.on_start_game(level, difficulty)
+    
+    def set_difficulty(self, difficulty: str) -> None:
+        """
+        设置游戏难度
+        
+        Args:
+            difficulty: 难度等级 ('easy', 'normal', 'hard')
+        """
+        self.current_difficulty = difficulty
+        if self.on_difficulty_change:
+            self.on_difficulty_change(difficulty)
     
     def pause_game(self) -> None:
         """暂停游戏"""
