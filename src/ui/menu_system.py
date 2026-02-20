@@ -1,0 +1,697 @@
+"""
+菜单系统 - 管理所有游戏菜单
+
+包括：
+- 主菜单
+- 关卡选择
+- 暂停菜单
+- 游戏结束/胜利界面
+"""
+
+from abc import ABC, abstractmethod
+from typing import Callable, List, Optional, Tuple
+import arcade
+
+
+class MenuButton:
+    """
+    菜单按钮
+    
+    可点击的菜单按钮，支持悬停效果
+    """
+    
+    def __init__(self, text: str, x: float, y: float, 
+                 width: float = 200, height: float = 50,
+                 callback: Optional[Callable] = None):
+        """
+        初始化按钮
+        
+        Args:
+            text: 按钮文本
+            x: X坐标
+            y: Y坐标
+            width: 宽度
+            height: 高度
+            callback: 点击回调函数
+        """
+        self.text = text
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.callback = callback
+        self.is_hovered = False
+        
+        # 颜色配置
+        self.color_normal = (100, 150, 100)
+        self.color_hover = (150, 200, 150)
+        self.color_text = (255, 255, 255)
+        
+    def render(self):
+        """渲染按钮"""
+        color = self.color_hover if self.is_hovered else self.color_normal
+        
+        # 绘制按钮背景
+        arcade.draw_rectangle_filled(
+            self.x, self.y, self.width, self.height, color
+        )
+        
+        # 绘制边框
+        arcade.draw_rectangle_outline(
+            self.x, self.y, self.width, self.height, (50, 100, 50), 2
+        )
+        
+        # 绘制文本
+        arcade.draw_text(
+            self.text, self.x, self.y,
+            self.color_text, 20,
+            anchor_x="center", anchor_y="center"
+        )
+    
+    def check_hover(self, mouse_x: float, mouse_y: float) -> bool:
+        """
+        检查鼠标悬停
+        
+        Args:
+            mouse_x: 鼠标X坐标
+            mouse_y: 鼠标Y坐标
+            
+        Returns:
+            是否悬停
+        """
+        half_width = self.width / 2
+        half_height = self.height / 2
+        
+        self.is_hovered = (
+            self.x - half_width <= mouse_x <= self.x + half_width and
+            self.y - half_height <= mouse_y <= self.y + half_height
+        )
+        
+        return self.is_hovered
+    
+    def on_click(self):
+        """处理点击事件"""
+        if self.callback:
+            self.callback()
+
+
+class BaseMenu(ABC):
+    """
+    菜单基类
+    
+    所有菜单的抽象基类
+    """
+    
+    def __init__(self, window_width: float, window_height: float):
+        """
+        初始化菜单
+        
+        Args:
+            window_width: 窗口宽度
+            window_height: 窗口高度
+        """
+        self.window_width = window_width
+        self.window_height = window_height
+        self.buttons: List[MenuButton] = []
+        self.is_visible = False
+        
+    @abstractmethod
+    def setup(self):
+        """设置菜单（创建按钮等）"""
+        pass
+    
+    def show(self):
+        """显示菜单"""
+        self.is_visible = True
+        self.setup()
+    
+    def hide(self):
+        """隐藏菜单"""
+        self.is_visible = False
+    
+    def render(self):
+        """渲染菜单"""
+        if not self.is_visible:
+            return
+        
+        # 绘制半透明背景
+        arcade.draw_rectangle_filled(
+            self.window_width / 2, self.window_height / 2,
+            self.window_width, self.window_height,
+            (0, 0, 0, 180)
+        )
+        
+        # 绘制按钮
+        for button in self.buttons:
+            button.render()
+    
+    def on_mouse_motion(self, x: float, y: float):
+        """
+        处理鼠标移动
+        
+        Args:
+            x: 鼠标X坐标
+            y: 鼠标Y坐标
+        """
+        if not self.is_visible:
+            return
+        
+        for button in self.buttons:
+            button.check_hover(x, y)
+    
+    def on_mouse_click(self, x: float, y: float):
+        """
+        处理鼠标点击
+        
+        Args:
+            x: 鼠标X坐标
+            y: 鼠标Y坐标
+            
+        Returns:
+            是否处理了点击
+        """
+        if not self.is_visible:
+            return False
+        
+        for button in self.buttons:
+            if button.check_hover(x, y):
+                button.on_click()
+                return True
+        
+        return False
+
+
+class MainMenu(BaseMenu):
+    """
+    主菜单
+    
+    游戏启动时显示的主菜单
+    """
+    
+    def __init__(self, window_width: float, window_height: float,
+                 on_start_game: Callable,
+                 on_level_select: Callable,
+                 on_settings: Callable,
+                 on_quit: Callable):
+        """
+        初始化主菜单
+        
+        Args:
+            window_width: 窗口宽度
+            window_height: 窗口高度
+            on_start_game: 开始游戏回调
+            on_level_select: 关卡选择回调
+            on_settings: 设置回调
+            on_quit: 退出回调
+        """
+        super().__init__(window_width, window_height)
+        self.on_start_game = on_start_game
+        self.on_level_select = on_level_select
+        self.on_settings = on_settings
+        self.on_quit = on_quit
+        
+    def setup(self):
+        """设置主菜单按钮"""
+        self.buttons.clear()
+        
+        center_x = self.window_width / 2
+        start_y = self.window_height / 2 + 100
+        spacing = 70
+        
+        # 标题
+        self.title = "植物大战僵尸"
+        
+        # 开始游戏按钮
+        self.buttons.append(MenuButton(
+            "开始游戏", center_x, start_y,
+            callback=self.on_start_game
+        ))
+        
+        # 关卡选择按钮
+        self.buttons.append(MenuButton(
+            "关卡选择", center_x, start_y - spacing,
+            callback=self.on_level_select
+        ))
+        
+        # 设置按钮
+        self.buttons.append(MenuButton(
+            "设置", center_x, start_y - spacing * 2,
+            callback=self.on_settings
+        ))
+        
+        # 退出按钮
+        self.buttons.append(MenuButton(
+            "退出游戏", center_x, start_y - spacing * 3,
+            callback=self.on_quit
+        ))
+    
+    def render(self):
+        """渲染主菜单"""
+        if not self.is_visible:
+            return
+        
+        # 绘制背景
+        arcade.draw_rectangle_filled(
+            self.window_width / 2, self.window_height / 2,
+            self.window_width, self.window_height,
+            (50, 100, 50)
+        )
+        
+        # 绘制标题
+        arcade.draw_text(
+            self.title,
+            self.window_width / 2, self.window_height - 100,
+            (255, 255, 0), 48,
+            anchor_x="center", anchor_y="center"
+        )
+        
+        # 绘制按钮
+        for button in self.buttons:
+            button.render()
+
+
+class LevelSelectMenu(BaseMenu):
+    """
+    关卡选择菜单
+    
+    选择要玩的关卡
+    """
+    
+    def __init__(self, window_width: float, window_height: float,
+                 on_level_selected: Callable[[int], None],
+                 on_back: Callable,
+                 max_unlocked_level: int = 1):
+        """
+        初始化关卡选择菜单
+        
+        Args:
+            window_width: 窗口宽度
+            window_height: 窗口高度
+            on_level_selected: 关卡选择回调
+            on_back: 返回回调
+            max_unlocked_level: 最大解锁关卡
+        """
+        super().__init__(window_width, window_height)
+        self.on_level_selected = on_level_selected
+        self.on_back = on_back
+        self.max_unlocked_level = max_unlocked_level
+        self.total_levels = 7
+        
+    def setup(self):
+        """设置关卡选择按钮"""
+        self.buttons.clear()
+        
+        # 关卡按钮
+        button_width = 80
+        button_height = 80
+        cols = 4
+        start_x = self.window_width / 2 - (cols * button_width) / 2 + button_width / 2
+        start_y = self.window_height / 2 + 50
+        
+        for i in range(self.total_levels):
+            level = i + 1
+            col = i % cols
+            row = i // cols
+            
+            x = start_x + col * (button_width + 20)
+            y = start_y - row * (button_height + 20)
+            
+            # 根据解锁状态设置颜色
+            is_unlocked = level <= self.max_unlocked_level
+            
+            button = MenuButton(
+                f"{level}", x, y, button_width, button_height,
+                callback=lambda l=level: self._on_level_click(l) if is_unlocked else None
+            )
+            
+            if not is_unlocked:
+                button.color_normal = (100, 100, 100)
+                button.color_hover = (100, 100, 100)
+            
+            self.buttons.append(button)
+        
+        # 返回按钮
+        self.buttons.append(MenuButton(
+            "返回", self.window_width / 2, 100,
+            callback=self.on_back
+        ))
+    
+    def _on_level_click(self, level: int):
+        """处理关卡点击"""
+        if level <= self.max_unlocked_level:
+            self.on_level_selected(level)
+    
+    def render(self):
+        """渲染关卡选择菜单"""
+        if not self.is_visible:
+            return
+        
+        # 绘制背景
+        arcade.draw_rectangle_filled(
+            self.window_width / 2, self.window_height / 2,
+            self.window_width, self.window_height,
+            (50, 80, 50)
+        )
+        
+        # 绘制标题
+        arcade.draw_text(
+            "选择关卡",
+            self.window_width / 2, self.window_height - 80,
+            (255, 255, 255), 36,
+            anchor_x="center", anchor_y="center"
+        )
+        
+        # 绘制按钮
+        for button in self.buttons:
+            button.render()
+        
+        # 绘制说明
+        arcade.draw_text(
+            "灰色关卡未解锁",
+            self.window_width / 2, 50,
+            (150, 150, 150), 16,
+            anchor_x="center", anchor_y="center"
+        )
+
+
+class PauseMenu(BaseMenu):
+    """
+    暂停菜单
+    
+    游戏暂停时显示的菜单
+    """
+    
+    def __init__(self, window_width: float, window_height: float,
+                 on_resume: Callable,
+                 on_restart: Callable,
+                 on_main_menu: Callable):
+        """
+        初始化暂停菜单
+        
+        Args:
+            window_width: 窗口宽度
+            window_height: 窗口高度
+            on_resume: 继续游戏回调
+            on_restart: 重新开始回调
+            on_main_menu: 返回主菜单回调
+        """
+        super().__init__(window_width, window_height)
+        self.on_resume = on_resume
+        self.on_restart = on_restart
+        self.on_main_menu = on_main_menu
+        
+    def setup(self):
+        """设置暂停菜单按钮"""
+        self.buttons.clear()
+        
+        center_x = self.window_width / 2
+        center_y = self.window_height / 2
+        spacing = 60
+        
+        # 继续游戏按钮
+        self.buttons.append(MenuButton(
+            "继续游戏", center_x, center_y + spacing,
+            callback=self.on_resume
+        ))
+        
+        # 重新开始按钮
+        self.buttons.append(MenuButton(
+            "重新开始", center_x, center_y,
+            callback=self.on_restart
+        ))
+        
+        # 返回主菜单按钮
+        self.buttons.append(MenuButton(
+            "返回主菜单", center_x, center_y - spacing,
+            callback=self.on_main_menu
+        ))
+    
+    def render(self):
+        """渲染暂停菜单"""
+        if not self.is_visible:
+            return
+        
+        # 绘制半透明遮罩
+        arcade.draw_rectangle_filled(
+            self.window_width / 2, self.window_height / 2,
+            self.window_width, self.window_height,
+            (0, 0, 0, 150)
+        )
+        
+        # 绘制标题
+        arcade.draw_text(
+            "游戏暂停",
+            self.window_width / 2, self.window_height / 2 + 150,
+            (255, 255, 255), 36,
+            anchor_x="center", anchor_y="center"
+        )
+        
+        # 绘制按钮
+        for button in self.buttons:
+            button.render()
+
+
+class GameOverMenu(BaseMenu):
+    """
+    游戏结束菜单
+    
+    游戏胜利或失败时显示的菜单
+    """
+    
+    def __init__(self, window_width: float, window_height: float,
+                 on_restart: Callable,
+                 on_main_menu: Callable):
+        """
+        初始化游戏结束菜单
+        
+        Args:
+            window_width: 窗口宽度
+            window_height: 窗口高度
+            on_restart: 重新开始回调
+            on_main_menu: 返回主菜单回调
+        """
+        super().__init__(window_width, window_height)
+        self.on_restart = on_restart
+        self.on_main_menu = on_main_menu
+        self.is_victory = False
+        self.score = 0
+        
+    def show_result(self, is_victory: bool, score: int):
+        """
+        显示游戏结果
+        
+        Args:
+            is_victory: 是否胜利
+            score: 最终得分
+        """
+        self.is_victory = is_victory
+        self.score = score
+        self.show()
+        
+    def setup(self):
+        """设置游戏结束菜单按钮"""
+        self.buttons.clear()
+        
+        center_x = self.window_width / 2
+        center_y = self.window_height / 2
+        spacing = 60
+        
+        # 重新开始按钮
+        self.buttons.append(MenuButton(
+            "重新开始", center_x, center_y,
+            callback=self.on_restart
+        ))
+        
+        # 返回主菜单按钮
+        self.buttons.append(MenuButton(
+            "返回主菜单", center_x, center_y - spacing,
+            callback=self.on_main_menu
+        ))
+    
+    def render(self):
+        """渲染游戏结束菜单"""
+        if not self.is_visible:
+            return
+        
+        # 绘制背景
+        color = (50, 100, 50) if self.is_victory else (100, 50, 50)
+        arcade.draw_rectangle_filled(
+            self.window_width / 2, self.window_height / 2,
+            self.window_width, self.window_height,
+            color
+        )
+        
+        # 绘制标题
+        title = "胜利！" if self.is_victory else "游戏结束"
+        title_color = (255, 255, 0) if self.is_victory else (255, 100, 100)
+        
+        arcade.draw_text(
+            title,
+            self.window_width / 2, self.window_height / 2 + 150,
+            title_color, 48,
+            anchor_x="center", anchor_y="center"
+        )
+        
+        # 绘制得分
+        arcade.draw_text(
+            f"得分: {self.score}",
+            self.window_width / 2, self.window_height / 2 + 80,
+            (255, 255, 255), 24,
+            anchor_x="center", anchor_y="center"
+        )
+        
+        # 绘制按钮
+        for button in self.buttons:
+            button.render()
+
+
+class MenuSystem:
+    """
+    菜单系统管理器
+    
+    统一管理所有菜单
+    """
+    
+    def __init__(self, window_width: float, window_height: float):
+        """
+        初始化菜单系统
+        
+        Args:
+            window_width: 窗口宽度
+            window_height: 窗口高度
+        """
+        self.window_width = window_width
+        self.window_height = window_height
+        
+        # 回调函数（需要在GameWindow中设置）
+        self.on_start_game: Optional[Callable] = None
+        self.on_level_select: Optional[Callable[[int], None]] = None
+        self.on_settings: Optional[Callable] = None
+        self.on_quit: Optional[Callable] = None
+        self.on_resume: Optional[Callable] = None
+        self.on_restart: Optional[Callable] = None
+        self.on_main_menu: Optional[Callable] = None
+        
+        # 菜单实例
+        self.main_menu: Optional[MainMenu] = None
+        self.level_select_menu: Optional[LevelSelectMenu] = None
+        self.pause_menu: Optional[PauseMenu] = None
+        self.game_over_menu: Optional[GameOverMenu] = None
+        
+        # 当前显示的菜单
+        self.current_menu: Optional[BaseMenu] = None
+        
+    def setup(self):
+        """设置菜单系统"""
+        # 主菜单
+        self.main_menu = MainMenu(
+            self.window_width, self.window_height,
+            self._on_start_game,
+            self._on_level_select,
+            self._on_settings,
+            self._on_quit
+        )
+        
+        # 关卡选择菜单
+        self.level_select_menu = LevelSelectMenu(
+            self.window_width, self.window_height,
+            self._on_level_selected,
+            self._on_back_to_main
+        )
+        
+        # 暂停菜单
+        self.pause_menu = PauseMenu(
+            self.window_width, self.window_height,
+            self._on_resume,
+            self._on_restart,
+            self._on_main_menu
+        )
+        
+        # 游戏结束菜单
+        self.game_over_menu = GameOverMenu(
+            self.window_width, self.window_height,
+            self._on_restart,
+            self._on_main_menu
+        )
+    
+    def show_main_menu(self):
+        """显示主菜单"""
+        self.current_menu = self.main_menu
+        self.main_menu.show()
+    
+    def show_level_select(self, max_unlocked_level: int = 1):
+        """显示关卡选择菜单"""
+        self.level_select_menu.max_unlocked_level = max_unlocked_level
+        self.current_menu = self.level_select_menu
+        self.level_select_menu.show()
+    
+    def show_pause_menu(self):
+        """显示暂停菜单"""
+        self.current_menu = self.pause_menu
+        self.pause_menu.show()
+    
+    def show_game_over(self, is_victory: bool, score: int):
+        """显示游戏结束菜单"""
+        self.current_menu = self.game_over_menu
+        self.game_over_menu.show_result(is_victory, score)
+    
+    def hide_current_menu(self):
+        """隐藏当前菜单"""
+        if self.current_menu:
+            self.current_menu.hide()
+            self.current_menu = None
+    
+    def render(self):
+        """渲染当前菜单"""
+        if self.current_menu:
+            self.current_menu.render()
+    
+    def on_mouse_motion(self, x: float, y: float):
+        """处理鼠标移动"""
+        if self.current_menu:
+            self.current_menu.on_mouse_motion(x, y)
+    
+    def on_mouse_click(self, x: float, y: float) -> bool:
+        """处理鼠标点击"""
+        if self.current_menu:
+            return self.current_menu.on_mouse_click(x, y)
+        return False
+    
+    # 回调函数包装器
+    def _on_start_game(self):
+        if self.on_start_game:
+            self.on_start_game()
+    
+    def _on_level_select(self):
+        if self.on_level_select:
+            self.show_level_select()
+    
+    def _on_settings(self):
+        if self.on_settings:
+            self.on_settings()
+    
+    def _on_quit(self):
+        if self.on_quit:
+            self.on_quit()
+    
+    def _on_level_selected(self, level: int):
+        if self.on_level_select:
+            self.on_level_select(level)
+    
+    def _on_back_to_main(self):
+        self.show_main_menu()
+    
+    def _on_resume(self):
+        self.hide_current_menu()
+        if self.on_resume:
+            self.on_resume()
+    
+    def _on_restart(self):
+        self.hide_current_menu()
+        if self.on_restart:
+            self.on_restart()
+    
+    def _on_main_menu(self):
+        self.hide_current_menu()
+        if self.on_main_menu:
+            self.on_main_menu()
