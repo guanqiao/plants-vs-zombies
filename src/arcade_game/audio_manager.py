@@ -12,6 +12,7 @@ from typing import Dict, Optional
 from enum import Enum, auto
 import arcade
 from ..core.logger import get_module_logger
+from .sound_synthesizer import get_synthesizer
 
 
 logger = get_module_logger(__name__)
@@ -64,13 +65,10 @@ class AudioManager:
     
     def _load_sounds(self) -> None:
         """加载所有音效"""
-        # 检查assets目录是否存在
         import os
         assets_dir = "assets/sounds"
-        if not os.path.exists(assets_dir):
-            os.makedirs(assets_dir, exist_ok=True)
         
-        # 尝试加载自定义音效，如果失败则静默跳过
+        # 音效文件映射
         sound_files = {
             SoundType.PLANT: "plant.wav",
             SoundType.SHOOT: "shoot.wav",
@@ -89,13 +87,58 @@ class AudioManager:
             SoundType.SPLASH: "splash.wav"
         }
         
+        # 首先尝试加载文件音效
+        file_sounds_loaded = 0
         for sound_type, filename in sound_files.items():
             file_path = os.path.join(assets_dir, filename)
             if os.path.exists(file_path):
                 try:
                     self.sounds[sound_type] = arcade.load_sound(file_path)
+                    file_sounds_loaded += 1
                 except Exception as e:
                     logger.warning(f"无法加载音效 {filename}: {e}")
+        
+        # 如果文件音效不足，使用程序生成音效补充
+        if file_sounds_loaded < len(sound_files):
+            logger.info(f"文件音效仅加载 {file_sounds_loaded}/{len(sound_files)} 个，使用程序生成音效补充")
+            self._generate_synthetic_sounds()
+    
+    def _generate_synthetic_sounds(self) -> None:
+        """使用程序生成音效"""
+        try:
+            synthesizer = get_synthesizer()
+            
+            # 生成各种音效
+            sound_generators = {
+                SoundType.PLANT: synthesizer.generate_plant_sound,
+                SoundType.SHOOT: synthesizer.generate_shoot_sound,
+                SoundType.HIT: synthesizer.generate_hit_sound,
+                SoundType.COLLECT_SUN: synthesizer.generate_collect_sun_sound,
+                SoundType.ZOMBIE_DEATH: synthesizer.generate_zombie_death_sound,
+                SoundType.ZOMBIE_EAT: synthesizer.generate_zombie_eat_sound,
+                SoundType.GAME_OVER: synthesizer.generate_game_over_sound,
+                SoundType.VICTORY: synthesizer.generate_victory_sound,
+                SoundType.BUTTON_CLICK: synthesizer.generate_button_click_sound,
+                SoundType.EXPLOSION: synthesizer.generate_explosion_sound,
+                SoundType.CHERRY_BOMB: synthesizer.generate_cherry_bomb_sound,
+                SoundType.POTATO_MINE: synthesizer.generate_potato_mine_sound,
+                SoundType.ICE_HIT: synthesizer.generate_ice_hit_sound,
+                SoundType.FIRE_HIT: synthesizer.generate_fire_hit_sound,
+                SoundType.SPLASH: synthesizer.generate_splash_sound,
+            }
+            
+            for sound_type, generator in sound_generators.items():
+                # 只生成尚未加载的音效
+                if sound_type not in self.sounds:
+                    try:
+                        self.sounds[sound_type] = generator()
+                    except Exception as e:
+                        logger.warning(f"生成音效 {sound_type.name} 失败: {e}")
+            
+            logger.info(f"程序生成音效完成，当前共有 {len(self.sounds)} 个音效")
+            
+        except Exception as e:
+            logger.error(f"程序生成音效失败: {e}")
     
     def play_sound(self, sound_type: SoundType, volume: float = 1.0) -> None:
         """
