@@ -221,7 +221,7 @@ class ZombieAnimationRenderer:
         
         # 绘制衣服细节（领带/破烂衣服）
         tie_color = (139, 69, 19)  # 棕色领带
-        arcade.draw_rectangle_filled(x, y, body_width * 0.15, body_height * 0.5, tie_color)
+        arcade.draw_rect_filled(arcade.XYWH(x, y, body_width * 0.15, body_height * 0.5), tie_color)
         
         # 绘制破烂的边缘
         self._render_tattered_edges(x, y, body_width, body_height, body_color)
@@ -279,9 +279,7 @@ class ZombieAnimationRenderer:
         tooth_height = height * 0.08
         for i in range(-1, 2):
             tooth_x = x + i * tooth_width * 1.5
-            arcade.draw_rectangle_filled(
-                tooth_x, mouth_y + tooth_height / 2,
-                tooth_width * 0.8, tooth_height, (255, 255, 255)
+            arcade.draw_rect_filled(arcade.XYWH(tooth_x, mouth_y + tooth_height / 2, tooth_width * 0.8, tooth_height), (255, 255, 255)
             )
     
     def _render_arms(self, zombie_id: int, body_x: float, body_y: float,
@@ -381,7 +379,7 @@ class ZombieAnimationRenderer:
         if part == ZombieBodyPart.HEAD:
             arcade.draw_circle_filled(x, y, 15, color)
         elif part in (ZombieBodyPart.ARM_LEFT, ZombieBodyPart.ARM_RIGHT):
-            arcade.draw_rectangle_filled(x, y, 8, 20, color)
+            arcade.draw_rect_filled(arcade.XYWH(x, y, 8, 20), color)
     
     def detach_part(self, zombie_id: int, part: ZombieBodyPart,
                    velocity_x: float = None, velocity_y: float = None) -> None:

@@ -226,7 +226,10 @@ class GameWindowWithMenus(arcade.Window):
         )
         self.world.add_system(self.plant_behavior_system)
         
-        self.zombie_behavior_system = ZombieBehaviorSystem(priority=45)
+        self.zombie_behavior_system = ZombieBehaviorSystem(
+            entity_manager=self.world._entity_manager,
+            priority=45
+        )
         self.world.add_system(self.zombie_behavior_system)
         
         self.sun_system = SunSystem(priority=50)
@@ -341,7 +344,7 @@ class GameWindowWithMenus(arcade.Window):
     
     def on_draw(self):
         """渲染游戏画面"""
-        arcade.start_render()
+        self.clear()
         
         # 如果在菜单中，只渲染菜单
         if self.game_state.is_in_menu():

@@ -255,7 +255,7 @@ class BeghouledGame(BaseMiniGame):
         import arcade
         
         # 绘制背景
-        arcade.draw_rectangle_filled(450, 300, 900, 600, (100, 100, 150))
+        arcade.draw_rect_filled(arcade.XYWH(450, 300, 900, 600), (100, 100, 150))
         
         # 绘制网格
         cell_size = 60
@@ -269,11 +269,11 @@ class BeghouledGame(BaseMiniGame):
                 
                 # 绘制格子背景
                 color = (150, 150, 200) if (row + col) % 2 == 0 else (130, 130, 180)
-                arcade.draw_rectangle_filled(x, y, cell_size - 2, cell_size - 2, color)
+                arcade.draw_rect_filled(arcade.XYWH(x, y, cell_size - 2, cell_size - 2), color)
                 
                 # 绘制选中的格子
                 if self.selected_cell == (row, col):
-                    arcade.draw_rectangle_outline(x, y, cell_size - 2, cell_size - 2, (255, 255, 0), 3)
+                    arcade.draw_rect_outline(arcade.XYWH(x, y, cell_size - 2, cell_size - 2), (255, 255, 0), 3)
                 
                 # 绘制植物
                 plant = self.grid[row][col]

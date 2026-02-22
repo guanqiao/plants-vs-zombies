@@ -1,6 +1,6 @@
 {
-  "version": "4.0",
-  "description": "精灵表配置文件 - 完整版",
+  "version": "5.0",
+  "description": "精灵表配置文件 - 完整版v2",
   "sprite_sheets": {
     "peashooter": {
       "idle": {
@@ -357,6 +357,124 @@
       },
       "attack": {
         "sheet_path": "images/zombies/zombie_pole_attack_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      }
+    },
+    "tall_nut": {
+      "idle": {
+        "sheet_path": "images/plants/tall_nut_idle_sheet.png",
+        "frames": 3,
+        "frame_width": 70,
+        "frame_height": 120,
+        "fps": 6,
+        "loop": true,
+        "columns": 4
+      },
+      "hurt": {
+        "sheet_path": "images/plants/tall_nut_hurt_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 120,
+        "fps": 8,
+        "loop": false,
+        "columns": 4
+      }
+    },
+    "spikeweed": {
+      "idle": {
+        "sheet_path": "images/plants/spikeweed_idle_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/plants/spikeweed_attack_sheet.png",
+        "frames": 3,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 15,
+        "loop": false,
+        "columns": 4
+      }
+    },
+    "zombie_dancing": {
+      "walk": {
+        "sheet_path": "images/zombies/zombie_dancing_walk_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      },
+      "summon": {
+        "sheet_path": "images/zombies/zombie_dancing_summon_sheet.png",
+        "frames": 8,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 8,
+        "loop": false,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/zombies/zombie_dancing_attack_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      }
+    },
+    "zombie_backup": {
+      "walk": {
+        "sheet_path": "images/zombies/zombie_backup_walk_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/zombies/zombie_backup_attack_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      }
+    },
+    "zombie_snorkel": {
+      "swim": {
+        "sheet_path": "images/zombies/zombie_snorkel_swim_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 12,
+        "loop": true,
+        "columns": 4
+      },
+      "walk": {
+        "sheet_path": "images/zombies/zombie_snorkel_walk_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 12,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/zombies/zombie_snorkel_attack_sheet.png",
         "frames": 4,
         "frame_width": 70,
         "frame_height": 100,

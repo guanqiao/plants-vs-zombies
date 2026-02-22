@@ -52,13 +52,11 @@ class MenuButton:
         color = self.color_hover if self.is_hovered else self.color_normal
         
         # 绘制按钮背景
-        arcade.draw_rectangle_filled(
-            self.x, self.y, self.width, self.height, color
+        arcade.draw_rect_filled(arcade.XYWH(self.x, self.y, self.width, self.height), color
         )
         
         # 绘制边框
-        arcade.draw_rectangle_outline(
-            self.x, self.y, self.width, self.height, (50, 100, 50), 2
+        arcade.draw_rect_outline(arcade.XYWH(self.x, self.y, self.width, self.height), (50, 100, 50), 2
         )
         
         # 绘制文本
@@ -135,10 +133,7 @@ class BaseMenu(ABC):
             return
         
         # 绘制半透明背景
-        arcade.draw_rectangle_filled(
-            self.window_width / 2, self.window_height / 2,
-            self.window_width, self.window_height,
-            (0, 0, 0, 180)
+        arcade.draw_rect_filled(arcade.XYWH(self.window_width / 2, self.window_height / 2, self.window_width, self.window_height), (0, 0, 0, 180)
         )
         
         # 绘制按钮
@@ -251,10 +246,7 @@ class MainMenu(BaseMenu):
             return
         
         # 绘制背景
-        arcade.draw_rectangle_filled(
-            self.window_width / 2, self.window_height / 2,
-            self.window_width, self.window_height,
-            (50, 100, 50)
+        arcade.draw_rect_filled(arcade.XYWH(self.window_width / 2, self.window_height / 2, self.window_width, self.window_height), (50, 100, 50)
         )
         
         # 绘制标题
@@ -347,10 +339,7 @@ class LevelSelectMenu(BaseMenu):
             return
         
         # 绘制背景
-        arcade.draw_rectangle_filled(
-            self.window_width / 2, self.window_height / 2,
-            self.window_width, self.window_height,
-            (50, 80, 50)
+        arcade.draw_rect_filled(arcade.XYWH(self.window_width / 2, self.window_height / 2, self.window_width, self.window_height), (50, 80, 50)
         )
         
         # 绘制标题
@@ -432,10 +421,7 @@ class PauseMenu(BaseMenu):
             return
         
         # 绘制半透明遮罩
-        arcade.draw_rectangle_filled(
-            self.window_width / 2, self.window_height / 2,
-            self.window_width, self.window_height,
-            (0, 0, 0, 150)
+        arcade.draw_rect_filled(arcade.XYWH(self.window_width / 2, self.window_height / 2, self.window_width, self.window_height), (0, 0, 0, 150)
         )
         
         # 绘制标题
@@ -547,10 +533,7 @@ class DifficultySelectMenu(BaseMenu):
             return
         
         # 绘制背景
-        arcade.draw_rectangle_filled(
-            self.window_width / 2, self.window_height / 2,
-            self.window_width, self.window_height,
-            (50, 80, 50)
+        arcade.draw_rect_filled(arcade.XYWH(self.window_width / 2, self.window_height / 2, self.window_width, self.window_height), (50, 80, 50)
         )
         
         # 绘制标题
@@ -644,10 +627,7 @@ class SettingsMenu(BaseMenu):
             return
         
         # 绘制背景
-        arcade.draw_rectangle_filled(
-            self.window_width / 2, self.window_height / 2,
-            self.window_width, self.window_height,
-            (50, 80, 50)
+        arcade.draw_rect_filled(arcade.XYWH(self.window_width / 2, self.window_height / 2, self.window_width, self.window_height), (50, 80, 50)
         )
         
         # 绘制标题
@@ -703,22 +683,16 @@ class SettingsMenu(BaseMenu):
         )
         
         # 滑块背景
-        arcade.draw_rectangle_filled(
-            x, y, slider_width, slider_height,
-            (50, 50, 50)
+        arcade.draw_rect_filled(arcade.XYWH(x, y, slider_width, slider_height), (50, 50, 50)
         )
         
         # 滑块填充
         fill_width = slider_width * value
-        arcade.draw_rectangle_filled(
-            x - (slider_width - fill_width) / 2, y, fill_width, slider_height,
-            (100, 200, 100)
+        arcade.draw_rect_filled(arcade.XYWH(x - (slider_width - fill_width) / 2, y, fill_width, slider_height), (100, 200, 100)
         )
         
         # 滑块边框
-        arcade.draw_rectangle_outline(
-            x, y, slider_width, slider_height,
-            (100, 100, 100), 2
+        arcade.draw_rect_outline(arcade.XYWH(x, y, slider_width, slider_height), (100, 100, 100), 2
         )
         
         # 滑块手柄
@@ -874,10 +848,7 @@ class GameOverMenu(BaseMenu):
         
         # 绘制背景
         color = (50, 100, 50) if self.is_victory else (100, 50, 50)
-        arcade.draw_rectangle_filled(
-            self.window_width / 2, self.window_height / 2,
-            self.window_width, self.window_height,
-            color
+        arcade.draw_rect_filled(arcade.XYWH(self.window_width / 2, self.window_height / 2, self.window_width, self.window_height), color
         )
         
         # 绘制标题

@@ -261,10 +261,7 @@ class EnhancedVisualEffectsSystem:
         if effect.transition_type == "fade_in":
             alpha = 255 - alpha
         
-        arcade.draw_rectangle_filled(
-            effect.x, effect.y,
-            2000, 2000,
-            (*effect.color, alpha)
+        arcade.draw_rect_filled(arcade.XYWH(effect.x, effect.y, 2000, 2000), (*effect.color, alpha)
         )
     
     def _render_ground_break(self, effect: GroundBreakEffect) -&gt; None:
@@ -317,10 +314,7 @@ class EnhancedVisualEffectsSystem:
         # 这里可以渲染放大的僵尸精灵
         # 暂时渲染一个占位框
         size = 100 * effect.scale
-        arcade.draw_rectangle_outline(
-            effect.x, effect.y,
-            size, size * 1.5,
-            (255, 255, 255, alpha),
+        arcade.draw_rect_outline(arcade.XYWH(effect.x, effect.y, size, size * 1.5), (255, 255, 255, alpha),
             3
         )
     

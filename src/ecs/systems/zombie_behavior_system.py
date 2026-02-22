@@ -23,9 +23,10 @@ class ZombieBehaviorSystem(System):
     # 攻击距离阈值
     ATTACK_RANGE = 40.0
     
-    def __init__(self, entity_factory=None, priority: int = 45):
+    def __init__(self, entity_factory=None, entity_manager=None, priority: int = 45):
         super().__init__(priority)
         self.entity_factory = entity_factory
+        self.entity_manager = entity_manager
         self.on_zombie_death_callbacks = []
     
     def update(self, dt: float, component_manager: ComponentManager) -> None:
@@ -48,6 +49,9 @@ class ZombieBehaviorSystem(System):
             # 检查僵尸是否死亡
             health = component_manager.get_component(entity_id, HealthComponent)
             if health and health.is_dead:
+                # 立即停止移动
+                velocity.vx = 0
+                velocity.vy = 0
                 zombies_to_remove.append(entity_id)
                 continue
             
@@ -427,6 +431,10 @@ class ZombieBehaviorSystem(System):
             # 触发死亡回调
             for callback in self.on_zombie_death_callbacks:
                 callback(zombie_id, zombie.score_value)
+        
+        # 销毁实体
+        if self.entity_manager:
+            self.entity_manager.destroy_entity(zombie_id)
     
     def register_death_callback(self, callback) -> None:
         """注册僵尸死亡回调"""

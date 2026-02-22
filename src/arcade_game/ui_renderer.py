@@ -19,7 +19,7 @@ import arcade
 from .sprite_manager import get_sprite_manager
 from ..core.theme_colors import (
     Color, GameColors, StatusColors, UIColors, EffectColors,
-    PRIMARY, SECONDARY, SECONDARY_DARK, ACCENT, WHITE, BLACK
+    PRIMARY, PRIMARY_DARK, SECONDARY, SECONDARY_LIGHT, SECONDARY_DARK, ACCENT, WHITE, BLACK
 )
 
 

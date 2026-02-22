@@ -363,9 +363,7 @@ class PogoBounceState:
         )
         
         # 脚踏板
-        arcade.draw_rectangle_filled(
-            pogo_x, pogo_bottom + actual_height,
-            20, 4, (100, 100, 100)
+        arcade.draw_rect_filled(arcade.XYWH(pogo_x, pogo_bottom + actual_height, 20, 4), (100, 100, 100)
         )
         
         # 底部弹簧
@@ -378,8 +376,7 @@ class PogoBounceState:
             t = i / (spring_coils - 1)
             coil_y = spring_bottom + t * spring_height
             width = spring_width * (0.8 + 0.2 * math.sin(t * math.pi * 4))
-            arcade.draw_rectangle_filled(
-                pogo_x, coil_y, width, 3, (150, 150, 150)
+            arcade.draw_rect_filled(arcade.XYWH(pogo_x, coil_y, width, 3), (150, 150, 150)
             )
 
 

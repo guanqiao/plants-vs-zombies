@@ -60,8 +60,8 @@ class ZombieVisualState:
         """触发受击效果"""
         self.hit_flash = 1.0
         self.hit_pulse = 1.0
-        self.shake_offset_x = random.uniform(-8, 8)
-        self.shake_offset_y = random.uniform(-5, 5)
+        self.shake_offset_x = random.uniform(-4, 4)
+        self.shake_offset_y = random.uniform(-3, 3)
         
         # 根据伤害生成血液粒子
         num_particles = min(5, max(1, damage // 10))
@@ -105,13 +105,10 @@ class ZombieVisualState:
             if self.hit_pulse < 0:
                 self.hit_pulse = 0
         
-        # 更新震动（增加随机性）
+        # 更新震动
         if abs(self.shake_offset_x) > 0.1 or abs(self.shake_offset_y) > 0.1:
-            self.shake_offset_x *= 0.75
-            self.shake_offset_y *= 0.75
-            # 添加随机扰动
-            self.shake_offset_x += random.uniform(-1, 1)
-            self.shake_offset_y += random.uniform(-0.5, 0.5)
+            self.shake_offset_x *= 0.85
+            self.shake_offset_y *= 0.85
         else:
             self.shake_offset_x = 0.0
             self.shake_offset_y = 0.0

@@ -163,6 +163,11 @@ class PvzVisualEffectsSystem(OptimizedVisualEffectsSystem):
         self._smoke_particle_batch.clear()
         self._crack_batch.clear()
         
+        # 清空父类批次缓冲区
+        self._circle_filled_batch.clear()
+        self._circle_outline_batch.clear()
+        self._line_batch.clear()
+        
         # 收集PVZ特效命令
         for effect in self.pvz_effects:
             self._collect_pvz_effect_commands(effect)
