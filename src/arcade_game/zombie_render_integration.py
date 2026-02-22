@@ -127,7 +127,7 @@ class ZombieRenderIntegration:
                     transform.y = new_y
     
     def render(self, zombie_id: int, component_manager: ComponentManager) -> None:
-        """渲染单个僵尸（在现有渲染系统之后调用）"""
+        """渲染单个僵尸（在现有渲染系统之后调用）- 只渲染特效"""
         # 根据LOD决定是否渲染
         if not self._lod_system.should_render(zombie_id):
             return
@@ -135,23 +135,13 @@ class ZombieRenderIntegration:
         transform = component_manager.get_component(zombie_id, TransformComponent)
         sprite = component_manager.get_component(zombie_id, SpriteComponent)
         zombie = component_manager.get_component(zombie_id, ZombieComponent)
-        anim_comp = component_manager.get_component(zombie_id, AnimationComponent)
         zombie_type_comp = component_manager.get_component(zombie_id, ZombieTypeComponent)
         
         if not transform or not sprite or not zombie:
             return
         
-        # 获取基础颜色
-        base_color = sprite.color
-        
-        # 应用受击闪烁
-        render_color = self._visual_system.apply_hit_flash_to_color(zombie_id, base_color)
-        
         # 获取渲染偏移（震动效果）
         offset_x, offset_y = self._visual_system.get_render_offset(zombie_id)
-        
-        # 获取脉冲缩放
-        pulse_scale = self._visual_system.get_hit_pulse_scale(zombie_id)
         
         # 计算最终位置
         final_x = transform.x + offset_x
@@ -174,19 +164,9 @@ class ZombieRenderIntegration:
         if self._lod_system.should_render_dust(zombie_id):
             self._effects.render_dust(zombie_id)
         
-        # 3. 渲染僵尸身体（使用程序化动画，根据LOD决定是否简化）
-        simplify = self._lod_system.should_simplify_body(zombie_id)
-        # TODO: 实现简化渲染
-        self._anim_renderer.render(
-            zombie_id, final_x, final_y,
-            render_color,
-            sprite.width * pulse_scale,
-            sprite.height * pulse_scale,
-            is_flipped_x=anim_comp.is_flipped_x if anim_comp else True
-        )
-        
-        # 4. 渲染表情（根据LOD决定）
+        # 3. 渲染表情（根据LOD决定）
         if self._lod_system.should_render_expression(zombie_id):
+            anim_comp = component_manager.get_component(zombie_id, AnimationComponent)
             head_y = final_y + sprite.height * 0.35
             self._effects.render_expression(
                 zombie_id, final_x, head_y,
@@ -194,14 +174,14 @@ class ZombieRenderIntegration:
                 is_flipped=anim_comp.is_flipped_x if anim_comp else True
             )
         
-        # 5. 渲染特殊僵尸效果
+        # 4. 渲染特殊僵尸效果
         self._render_special_effects(zombie_id, final_x, final_y, sprite.height, 
                                      zombie_type_comp, zombie)
         
-        # 6. 渲染血液粒子
+        # 5. 渲染血液粒子
         self._visual_system.render_blood_particles(zombie_id, final_x, final_y)
         
-        # 7. 渲染护甲（如果破碎）
+        # 6. 渲染护甲（如果破碎）
         visual_state = self._visual_system.get_or_create_state(zombie_id)
         if zombie.has_armor and visual_state.armor_broken:
             armor_type = self._get_armor_type(zombie_type_comp)

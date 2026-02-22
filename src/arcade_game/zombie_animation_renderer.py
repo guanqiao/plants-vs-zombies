@@ -47,14 +47,14 @@ class ProceduralAnimationState:
     """程序化动画状态"""
     # 行走动画参数
     walk_cycle_time: float = 0.0
-    walk_speed: float = 2.5  # 行走循环速度
+    walk_speed: float = 1.5  # 降低行走循环速度
     
     # 身体摆动
-    body_bob_amount: float = 1.8  # 身体上下摆动幅度
-    body_sway_amount: float = 1.0  # 身体左右摆动幅度
+    body_bob_amount: float = 0.8  # 降低身体上下摆动幅度
+    body_sway_amount: float = 0.5  # 降低身体左右摆动幅度
     
     # 手臂摆动
-    arm_swing_amount: float = 10.0  # 手臂摆动角度
+    arm_swing_amount: float = 5.0  # 降低手臂摆动角度
     
     # 当前变换
     body_offset_y: float = 0.0

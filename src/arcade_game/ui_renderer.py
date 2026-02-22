@@ -260,8 +260,18 @@ class UIRenderer:
         """设置分数"""
         self.score_display.set_target(float(score))
     
-    def render(self) -> None:
-        """渲染所有UI"""
+    def render(self, sun_count: int = 0, score: int = 0, current_level: int = 1) -> None:
+        """渲染所有UI
+        
+        Args:
+            sun_count: 当前阳光数量
+            score: 当前分数
+            current_level: 当前关卡
+        """
+        # 更新状态
+        self.set_sun_count(sun_count)
+        self.set_score(score)
+        
         self._render_sun_counter()
         self._render_wave_indicator()
         self._render_score()

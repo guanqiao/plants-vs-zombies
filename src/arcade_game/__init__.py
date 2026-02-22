@@ -4,7 +4,7 @@ Arcade游戏模块
 使用Arcade引擎和ECS架构的游戏实现
 """
 
-from .game_window_with_menus import GameWindowWithMenus as GameWindow
+from .game_window import GameWindow
 from .entity_factory import EntityFactory
 from .zombie_animation_renderer import ZombieAnimationRenderer, ZombieBodyPart
 from .zombie_visual_system import ZombieVisualSystem, DeathType

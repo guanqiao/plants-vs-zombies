@@ -105,12 +105,15 @@ class ZombieVisualState:
             if self.hit_pulse < 0:
                 self.hit_pulse = 0
         
-        # 更新震动
-        if abs(self.shake_offset_x) > 0.1 or abs(self.shake_offset_y) > 0.1:
-            self.shake_offset_x *= 0.85
-            self.shake_offset_y *= 0.85
+        # 更新震动 - 更稳定的衰减，直接设置为0当低于阈值
+        if abs(self.shake_offset_x) > 0.05:
+            self.shake_offset_x *= 0.9
         else:
             self.shake_offset_x = 0.0
+        
+        if abs(self.shake_offset_y) > 0.05:
+            self.shake_offset_y *= 0.9
+        else:
             self.shake_offset_y = 0.0
         
         # 更新血液粒子

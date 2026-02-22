@@ -33,6 +33,9 @@ from .three_d_effects_optimized import ThreeDEffectsOptimized
 from .save_system import SaveSystem, GameSaveData, get_save_system
 from .zombie_render_integration import get_zombie_render_integration
 from ..core.performance_monitor import get_performance_monitor, toggle_debug
+from ..core.game_state import GameStateManager, GameState
+from ..core.game_constants import EASY, NORMAL, HARD
+from ..ui.menu_system import MenuSystem
 
 
 class GameWindow(arcade.Window):
@@ -59,61 +62,47 @@ class GameWindow(arcade.Window):
         
         self.logger.info("游戏窗口初始化开始")
         
+        # 游戏状态管理器
+        self.game_state = GameStateManager()
+        self._setup_game_state_callbacks()
+        
+        # 音效管理器（尽早初始化）
+        self.audio_manager = get_audio_manager()
+        
+        # 菜单系统
+        self.menu_system = MenuSystem(self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
+        self._setup_menu_callbacks()
+        self.menu_system.setup()
+        
+        # 游戏数据
         self.sun_count = 50
         self.score = 0
         self.current_level = 1
         self.game_over = False
         self.victory = False
+        self.current_difficulty = "normal"
         
-        self.background_renderer = BackgroundRenderer(self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
-        self.ui_renderer = UIRenderer(self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
-        self.game_over_renderer = GameOverRenderer(self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
-        
-        self.world = World()
-        
-        self.event_bus = EventBus()
-        
-        self.entity_factory = EntityFactory(self.world)
-        
-        # 先创建3D效果系统，供渲染系统使用
-        self.three_d_effects = ThreeDEffectsOptimized()
-        
-        self._init_systems()
-        
-        self.planting_system = PlantingSystem(self.world, self.entity_factory)
-        
-        self.zombie_spawner = ZombieSpawner(self.world, self.entity_factory)
-        self.zombie_spawner.set_level(self.current_level)
-        
-        self.sun_collection_system = SunCollectionSystem(self.world, self.entity_factory)
-        self.sun_collection_system.register_collection_callback(self._on_sun_collected)
-        
-        self.audio_manager = get_audio_manager()
-        
-        self.particle_system = ParticleSystem()
-        
-        self.health_bar_system = HealthBarSystem()
-        
-        self.damage_number_system = DamageNumberSystem()
-        
-        self.screen_shake = ScreenShake()
-        
-        # self.ui_renderer = UIRenderer(self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
-        
-        # 创建视觉特效系统
-        # 使用PVZ风格的视觉特效系统
-        self.visual_effects = PvzVisualEffectsSystem()
-        
-        # 初始化僵尸渲染集成系统
-        self.zombie_render_integration = get_zombie_render_integration()
-        
-        # 初始化存档系统
-        self.save_system = get_save_system()
+        # 初始化游戏组件（延迟到实际开始游戏时）
+        self.world = None
+        self.entity_factory = None
+        self.planting_system = None
+        self.zombie_spawner = None
+        self.sun_collection_system = None
+        self.particle_system = None
+        self.health_bar_system = None
+        self.damage_number_system = None
+        self.screen_shake = None
+        self.ui_renderer = None
+        self.visual_effects = None
+        self.background_renderer = None
+        self.three_d_effects = None
+        self.zombie_render_integration = None
+        self.save_system = None
+        self.event_bus = None
         self.play_time = 0.0
         
-        self._register_event_handlers()
-        
-        self.zombie_behavior_system.register_death_callback(self._on_zombie_death)
+        # 显示主菜单
+        self.menu_system.show_main_menu()
         
         arcade.set_background_color(self.BACKGROUND_COLOR)
         
@@ -121,6 +110,122 @@ class GameWindow(arcade.Window):
         self._mouse_y = 0
         
         self.logger.info("游戏窗口初始化完成")
+    
+    def _setup_game_state_callbacks(self):
+        """设置游戏状态回调"""
+        self.game_state.on_state_change = self._on_state_change
+        self.game_state.on_start_game = self._on_start_game
+        self.game_state.on_pause = self._on_pause
+        self.game_state.on_resume = self._on_resume
+        self.game_state.on_restart = self._on_restart
+        self.game_state.on_quit = self._on_quit
+    
+    def _setup_menu_callbacks(self):
+        """设置菜单回调"""
+        self.menu_system.on_start_game = self._on_menu_start_game
+        self.menu_system.on_level_select = self._on_menu_level_select
+        self.menu_system.on_settings = self._on_menu_settings
+        self.menu_system.on_quit = self._on_menu_quit
+        self.menu_system.on_resume = self._on_menu_resume
+        self.menu_system.on_restart = self._on_menu_restart
+        self.menu_system.on_main_menu = self._on_menu_main_menu
+        self.menu_system.on_difficulty_selected = self._on_difficulty_selected
+        
+        # 音量回调
+        self.menu_system.on_master_volume_change = self._on_master_volume_change
+        self.menu_system.on_sfx_volume_change = self._on_sfx_volume_change
+        self.menu_system.on_music_volume_change = self._on_music_volume_change
+    
+    def _init_game_components(self, level: int = 1, difficulty: str = "normal"):
+        """初始化游戏组件"""
+        self.current_level = level
+        self.current_difficulty = difficulty
+        
+        # 根据难度获取配置
+        difficulty_config = self._get_difficulty_config(difficulty)
+        
+        # 创建ECS世界
+        self.world = World()
+        
+        # 创建事件总线
+        self.event_bus = EventBus()
+        
+        # 创建实体工厂
+        self.entity_factory = EntityFactory(self.world)
+        
+        # 初始化系统
+        self._init_systems()
+        
+        # 创建种植系统
+        self.planting_system = PlantingSystem(self.world, self.entity_factory)
+        
+        # 创建僵尸生成器
+        self.zombie_spawner = ZombieSpawner(self.world, self.entity_factory)
+        self.zombie_spawner.set_level(self.current_level)
+        self.zombie_spawner.set_difficulty(
+            difficulty_config.zombie_speed_multiplier,
+            difficulty_config.zombie_health_multiplier,
+            difficulty_config.zombie_spawn_rate_multiplier
+        )
+        
+        # 创建阳光收集系统
+        self.sun_collection_system = SunCollectionSystem(self.world, self.entity_factory)
+        self.sun_collection_system.register_collection_callback(self._on_sun_collected)
+        # 设置难度相关配置
+        self.sun_collection_system.set_difficulty_config(
+            difficulty_config.auto_sun_spawn_interval,
+            difficulty_config.sun_value
+        )
+        
+        # 创建粒子系统
+        self.particle_system = ParticleSystem()
+        
+        # 创建血条系统
+        self.health_bar_system = HealthBarSystem()
+        
+        # 创建伤害数字系统
+        self.damage_number_system = DamageNumberSystem()
+        
+        # 创建屏幕震动效果
+        self.screen_shake = ScreenShake()
+        
+        # 创建UI渲染器
+        self.ui_renderer = UIRenderer(self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
+        
+        # 创建视觉特效系统
+        self.visual_effects = PvzVisualEffectsSystem()
+        
+        # 创建背景渲染器
+        self.background_renderer = BackgroundRenderer(self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
+        
+        # 先创建3D效果系统
+        self.three_d_effects = ThreeDEffectsOptimized()
+        
+        # 初始化僵尸渲染集成系统
+        self.zombie_render_integration = get_zombie_render_integration()
+        
+        # 初始化存档系统
+        self.save_system = get_save_system()
+        
+        # 注册事件处理器
+        self._register_event_handlers()
+        
+        # 注册僵尸死亡回调
+        self.zombie_behavior_system.register_death_callback(self._on_zombie_death)
+        
+        # 重置游戏数据（根据难度设置初始阳光）
+        self.sun_count = difficulty_config.initial_sun
+        self.score = 0
+        self.play_time = 0.0
+    
+    def _get_difficulty_config(self, difficulty: str):
+        """获取难度配置"""
+        if difficulty == "easy":
+            return EASY
+        elif difficulty == "hard":
+            return HARD
+        else:
+            return NORMAL
     
     def _init_systems(self):
         """初始化所有ECS系统"""
@@ -270,7 +375,16 @@ class GameWindow(arcade.Window):
     
     def on_update(self, delta_time: float):
         """更新游戏状态"""
-        if self.game_over or self.victory:
+        # 如果在菜单中，只更新菜单
+        if self.game_state.is_in_menu():
+            return
+        
+        # 如果暂停，不更新游戏逻辑
+        if self.game_state.is_paused():
+            return
+        
+        # 如果游戏未初始化或已结束，不更新
+        if not self.world or self.game_over or self.victory:
             return
         
         try:
@@ -385,6 +499,17 @@ class GameWindow(arcade.Window):
         
         self.clear()
         
+        # 如果在菜单中，只渲染菜单
+        if self.game_state.is_in_menu():
+            self.menu_system.render()
+            perf_monitor.end_frame()
+            return
+        
+        # 如果游戏未初始化，不渲染游戏画面
+        if not self.world:
+            perf_monitor.end_frame()
+            return
+        
         # 获取屏幕震动偏移（暂时不应用）
         shake_x, shake_y = self.screen_shake.get_offset()
         
@@ -418,11 +543,13 @@ class GameWindow(arcade.Window):
         # 渲染UI
         self._draw_ui()
         
-        # 渲染游戏结束/胜利画面
-        if self.game_over:
-            self._draw_game_over()
-        elif self.victory:
-            self._draw_victory()
+        # 如果暂停，渲染暂停菜单
+        if self.game_state.is_paused():
+            self.menu_system.render()
+        
+        # 如果游戏结束或胜利，渲染结束菜单
+        if self.game_state.is_game_over() or self.game_state.is_victory():
+            self.menu_system.render()
         
         # 更新性能监控数据
         perf_monitor.set_entity_count(len(self.world._entity_manager._entities))
@@ -466,6 +593,10 @@ class GameWindow(arcade.Window):
             transform = self.world._component_manager.get_component(entity_id, TransformComponent)
             if transform and transform.x <= 0:
                 self.game_over = True
+                # 使用游戏状态管理器
+                self.game_state.game_over(self.score)
+                # 显示游戏结束菜单
+                self.menu_system.show_game_over(False, self.score)
                 # 播放游戏结束音效
                 self.audio_manager.play_game_over_sound()
                 return
@@ -475,6 +606,10 @@ class GameWindow(arcade.Window):
             zombies_remaining = len(self.world._component_manager.query(TransformComponent, ZombieComponent))
             if zombies_remaining == 0:
                 self.victory = True
+                # 使用游戏状态管理器
+                self.game_state.victory(self.score)
+                # 显示胜利菜单
+                self.menu_system.show_game_over(True, self.score)
                 # 播放胜利音效
                 self.audio_manager.play_victory_sound()
     
@@ -535,7 +670,10 @@ class GameWindow(arcade.Window):
         """处理键盘按键"""
         if key == arcade.key.ESCAPE:
             # 暂停/恢复游戏
-            pass
+            if self.game_state.is_playing():
+                self.game_state.pause_game()
+            elif self.game_state.is_paused():
+                self.game_state.resume_game()
         elif key == arcade.key.R:
             # 重置游戏 - 任何时候都可以重置
             self.reset_game()
@@ -670,7 +808,16 @@ class GameWindow(arcade.Window):
     
     def on_mouse_press(self, x: float, y: float, button, modifiers):
         """处理鼠标点击"""
-        if self.game_over or self.victory:
+        # 如果有菜单显示，优先处理菜单点击
+        if (self.game_state.is_in_menu() or 
+            self.game_state.is_paused() or 
+            self.game_state.is_game_over() or 
+            self.game_state.is_victory()):
+            if self.menu_system.on_mouse_click(x, y):
+                return
+        
+        # 如果游戏未初始化，不处理游戏点击
+        if not self.world:
             return
         
         # 先尝试收集阳光
@@ -706,8 +853,18 @@ class GameWindow(arcade.Window):
         """处理鼠标移动"""
         self._mouse_x = x
         self._mouse_y = y
+        
+        # 如果在菜单中，传递给菜单系统
+        if (self.game_state.is_in_menu() or 
+            self.game_state.is_paused() or 
+            self.game_state.is_game_over() or 
+            self.game_state.is_victory()):
+            self.menu_system.on_mouse_motion(x, y)
+            return
+        
         # 更新植物卡片悬浮状态
-        self.planting_system.handle_mouse_move(x, y)
+        if self.planting_system:
+            self.planting_system.handle_mouse_move(x, y)
     
     def reset_game(self):
         """重置游戏"""
@@ -750,3 +907,82 @@ class GameWindow(arcade.Window):
     def add_score(self, points: int):
         """添加分数"""
         self.score += points
+    
+    # ==================== 游戏状态回调 ====================
+    
+    def _on_state_change(self, old_state, new_state):
+        """游戏状态改变回调"""
+        self.logger.info(f"游戏状态: {old_state.name} -> {new_state.name}")
+    
+    def _on_start_game(self, level, difficulty):
+        """开始游戏回调"""
+        self._init_game_components(level, difficulty)
+        self.menu_system.hide_current_menu()
+    
+    def _on_pause(self):
+        """暂停游戏回调"""
+        self.menu_system.show_pause_menu()
+    
+    def _on_resume(self):
+        """继续游戏回调"""
+        self.menu_system.hide_current_menu()
+    
+    def _on_restart(self):
+        """重新开始回调"""
+        self._init_game_components(self.current_level, self.current_difficulty)
+        self.menu_system.hide_current_menu()
+    
+    def _on_quit(self):
+        """退出游戏回调"""
+        arcade.close_window()
+    
+    # ==================== 菜单回调 ====================
+    
+    def _on_menu_start_game(self):
+        """菜单开始游戏"""
+        self.game_state.start_game(1)
+    
+    def _on_menu_level_select(self):
+        """菜单关卡选择"""
+        self.menu_system.show_level_select(self.game_state.max_unlocked_level)
+    
+    def _on_menu_settings(self):
+        """菜单设置"""
+        self.menu_system.show_settings()
+    
+    def _on_master_volume_change(self, value: float):
+        """主音量变化回调"""
+        self.audio_manager.set_master_volume(value)
+    
+    def _on_sfx_volume_change(self, value: float):
+        """音效音量变化回调"""
+        self.audio_manager.set_sfx_volume(value)
+    
+    def _on_music_volume_change(self, value: float):
+        """音乐音量变化回调"""
+        self.audio_manager.set_music_volume(value)
+    
+    def _on_menu_quit(self):
+        """菜单退出"""
+        self.game_state.quit_game()
+    
+    def _on_menu_resume(self):
+        """菜单继续"""
+        self.game_state.resume_game()
+    
+    def _on_menu_restart(self):
+        """菜单重新开始"""
+        self.game_state.restart_game()
+    
+    def _on_menu_main_menu(self):
+        """菜单返回主菜单"""
+        self.game_state.go_to_main_menu()
+        self.menu_system.show_main_menu()
+    
+    def _on_difficulty_selected(self, difficulty: str):
+        """难度选择回调"""
+        # 保存当前选择的难度
+        self.current_difficulty = difficulty
+        # 开始游戏（使用当前关卡或默认关卡1）
+        level = getattr(self.menu_system, '_pending_level', 1)
+        self.game_state.start_game(level, difficulty)
