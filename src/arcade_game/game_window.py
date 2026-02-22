@@ -13,7 +13,7 @@ from ..ecs.systems import (
 )
 from ..ecs.components import (
     TransformComponent, HealthComponent, ZombieComponent,
-    PlantComponent, GridPositionComponent
+    PlantComponent, GridPositionComponent, SpriteComponent
 )
 from ..core.event_bus import EventBus, Event, EventType
 from .entity_factory import EntityFactory
@@ -28,8 +28,10 @@ from .damage_number_system import DamageNumberSystem
 from .screen_shake import ScreenShake
 from .ui_renderer import UIRenderer, GameOverRenderer
 from .visual_effects_optimized import OptimizedVisualEffectsSystem
-from .three_d_effects import ThreeDEffects
+from .pvz_visual_effects import PvzVisualEffectsSystem
+from .three_d_effects_optimized import ThreeDEffectsOptimized
 from .save_system import SaveSystem, GameSaveData, get_save_system
+from .zombie_render_integration import get_zombie_render_integration
 from ..core.performance_monitor import get_performance_monitor, toggle_debug
 
 
@@ -74,7 +76,7 @@ class GameWindow(arcade.Window):
         self.entity_factory = EntityFactory(self.world)
         
         # 先创建3D效果系统，供渲染系统使用
-        self.three_d_effects = ThreeDEffects()
+        self.three_d_effects = ThreeDEffectsOptimized()
         
         self._init_systems()
         
@@ -99,8 +101,11 @@ class GameWindow(arcade.Window):
         # self.ui_renderer = UIRenderer(self.SCREEN_WIDTH, self.SCREEN_HEIGHT)
         
         # 创建视觉特效系统
-        # 使用优化版的视觉特效系统
-        self.visual_effects = OptimizedVisualEffectsSystem()
+        # 使用PVZ风格的视觉特效系统
+        self.visual_effects = PvzVisualEffectsSystem()
+        
+        # 初始化僵尸渲染集成系统
+        self.zombie_render_integration = get_zombie_render_integration()
         
         # 初始化存档系统
         self.save_system = get_save_system()
@@ -119,8 +124,9 @@ class GameWindow(arcade.Window):
     
     def _init_systems(self):
         """初始化所有ECS系统"""
-        # 使用优化版的渲染系统
-        self.render_system = OptimizedRenderSystem(priority=100, three_d_effects=self.three_d_effects)
+        # 使用渲染系统
+        from ..ecs.systems import RenderSystem
+        self.render_system = RenderSystem(priority=100)
         self.world.add_system(self.render_system)
         
         self.movement_system = MovementSystem(priority=10)
@@ -167,6 +173,7 @@ class GameWindow(arcade.Window):
         y = event.data.get('y', 0)
         damage = event.data.get('damage', 0)
         damage_type = event.data.get('damage_type', 'normal')
+        target_id = event.data.get('target_id')
         
         self.damage_number_system.add_damage_number(x, y, damage, damage_type)
         
@@ -176,9 +183,17 @@ class GameWindow(arcade.Window):
         if damage_type == 'ice':
             self.visual_effects.create_frost(x, y, radius=40, duration=0.4)
             self.visual_effects.create_hit_spark(x, y, length=15, color=(150, 200, 255))
+            # Add PVZ-style ice trail
+            self.visual_effects.create_ice_trail(x, y, radius=35, duration=0.5)
         else:
             self.visual_effects.create_hit_spark(x, y)
             self.visual_effects.create_ripple(x, y, max_radius=30, color=(255, 200, 100))
+            # Add PVZ-style damage pop
+            self.visual_effects.create_damage_pop(x, y, damage, color=(255, 255, 255), duration=1.0)
+        
+        # 如果目标是僵尸，触发僵尸受击效果
+        if target_id is not None:
+            self.zombie_render_integration.trigger_hit(target_id, damage)
         
         self._play_damage_sound(damage_type)
     
@@ -209,6 +224,8 @@ class GameWindow(arcade.Window):
         # 添加视觉特效
         if explosion_type == 'cherry_bomb':
             self.visual_effects.create_cherry_bomb_visual(x, y)
+        elif explosion_type == 'potato_mine':
+            self.visual_effects.create_potato_mine_visual(x, y)
         else:
             self.visual_effects.create_explosion(x, y, max_radius=radius, color=(255, 150, 50))
             self.visual_effects.create_shockwave(x, y, max_radius=radius * 1.5)
@@ -299,6 +316,9 @@ class GameWindow(arcade.Window):
             # 更新3D效果系统
             self.three_d_effects.update(delta_time)
             
+            # 更新僵尸渲染集成系统
+            self.zombie_render_integration.update(delta_time, self.world._component_manager)
+            
             # 更新血条系统
             self._update_health_bars()
             
@@ -371,6 +391,9 @@ class GameWindow(arcade.Window):
         # 渲染所有实体
         self.render_system.render(self.world._component_manager)
         
+        # 渲染僵尸特效（阴影、尘土、表情等）
+        self._render_zombie_effects()
+        
         # 渲染血条
         self.health_bar_system.render()
         
@@ -407,6 +430,15 @@ class GameWindow(arcade.Window):
         
         # 结束性能监控帧
         perf_monitor.end_frame()
+    
+    def _render_zombie_effects(self):
+        """渲染僵尸特效（阴影、尘土、表情等）"""
+        # 获取所有僵尸实体并渲染特效
+        zombies = self.world._component_manager.query(
+            TransformComponent, SpriteComponent, ZombieComponent
+        )
+        for zombie_id in zombies:
+            self.zombie_render_integration.render(zombie_id, self.world._component_manager)
     
     def _draw_ui(self):
         """绘制UI界面"""
@@ -453,9 +485,18 @@ class GameWindow(arcade.Window):
         transform = self.world._component_manager.get_component(zombie_id, TransformComponent)
         if transform:
             self.particle_system.create_zombie_death_effect(transform.x, transform.y)
+            # 触发僵尸死亡动画
+            from .zombie_visual_system import DeathType
+            self.zombie_render_integration.start_death_animation(
+                zombie_id, transform.x, transform.y,
+                zombie_type='normal', death_type=DeathType.NORMAL
+            )
         
         # 移除血条
         self.health_bar_system.remove_health_bar(zombie_id)
+        
+        # 移除僵尸渲染效果
+        self.zombie_render_integration.remove_zombie(zombie_id)
     
     def _on_sun_collected(self, amount: int, x: float, y: float):
         """阳光收集回调"""
@@ -636,7 +677,7 @@ class GameWindow(arcade.Window):
             return
         
         # 处理种植
-        handled, planted, removed = self.planting_system.handle_mouse_press(x, y, self.sun_count)
+        handled, planted, removed = self.planting_system.handle_mouse_press(x, y, self.sun_count, return_tuple=True)
         if handled:
             if planted:
                 # 播放种植音效
@@ -674,6 +715,8 @@ class GameWindow(arcade.Window):
         self.particle_system.clear()
         self.health_bar_system.clear()
         self.damage_number_system.clear()
+        self.visual_effects.clear()
+        self.zombie_render_integration.clear()
         self.screen_shake.stop()
         self.sun_count = 50
         self.score = 0

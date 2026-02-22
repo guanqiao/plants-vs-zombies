@@ -403,9 +403,12 @@ class ZombieEffects:
                 for i in range(-1, 2):
                     tooth_x = x + i * tooth_width * 1.5
                     # 上牙
-                    arcade.draw_rectangle_filled(
-                        tooth_x, y + open_height / 2 - tooth_height / 2,
-                        tooth_width * 0.8, tooth_height,
+                    t_half_w = tooth_width * 0.8 / 2
+                    t_half_h = tooth_height / 2
+                    t_y = y + open_height / 2 - tooth_height / 2
+                    arcade.draw_lrbt_rectangle_filled(
+                        tooth_x - t_half_w, tooth_x + t_half_w,
+                        t_y - t_half_h, t_y + t_half_h,
                         (240, 240, 240)
                     )
         elif expression == ZombieExpression.PAIN:

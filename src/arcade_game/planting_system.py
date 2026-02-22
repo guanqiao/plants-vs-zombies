@@ -79,23 +79,53 @@ class PlantCard:
         sprite_manager = get_sprite_manager()
         
         # 获取文件名
-        filename = self.PLANT_SPRITE_FILES.get(self.plant_type.name)
-        if not filename:
-            return None
+        plant_name_lower = self.plant_type.name.lower().replace('_', '').replace('bomb', '_bomb')
         
-        # 构建完整路径
-        texture_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-            'assets', 'sprites', 'plants', filename
-        )
+        # 尝试多种可能的文件名格式（优先使用增强版精灵）
+        possible_names = [
+            f"{plant_name_lower}_idle_sheet.png",  # 动画精灵表
+            f"{plant_name_lower}_idle.png",      # 静态精灵
+            f"{plant_name_lower}.png",            # 基础精灵
+        ]
         
-        # 加载纹理
-        if os.path.exists(texture_path):
-            try:
-                texture_name = f"planting_card_{self.plant_type.name.lower()}"
-                return sprite_manager.load_texture(texture_name, texture_path)
-            except Exception:
-                pass
+        # 映射原始文件名到可能的增强版文件名
+        name_mapping = {
+            'PEASHOOTER': ['peashooter_idle_sheet', 'peashooter_idle', 'peashooter'],
+            'SUNFLOWER': ['sunflower_idle_sheet', 'sunflower_idle', 'sunflower'],
+            'WALLNUT': ['wallnut', 'wallnut_idle'],
+            'CHERRY_BOMB': ['cherry_bomb_idle_sheet', 'cherry_bomb_idle', 'cherry_bomb'],
+            'SNOW_PEA': ['snowpea_idle_sheet', 'snowpea_idle', 'snowpea'],
+            'REPEATER': ['repeater', 'repeater_idle'],
+            'CHOMPER': ['chomper', 'chomper_idle'],
+            'POTATO_MINE': ['potato_mine_buried_sheet', 'potato_mine_armed_sheet', 'potato_mine'],
+        }
+        
+        plant_type_name = self.plant_type.name
+        if plant_type_name in name_mapping:
+            possible_names = [f"{name}_png" for name in name_mapping[plant_type_name]]
+        
+        # 尝试加载各种可能的纹理
+        for name in possible_names:
+            # 先尝试从精灵管理器获取
+            texture = sprite_manager.get_texture(name.replace('_png', ''))
+            if texture:
+                return texture
+            
+            # 如果不存在，尝试从文件加载
+            texture_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+                'assets', 'images', 'plants', name
+            )
+            
+            if os.path.exists(texture_path):
+                try:
+                    texture_name = f"planting_card_{name.replace('.png', '').replace('_png', '')}"
+                    loaded_texture = sprite_manager.load_texture(texture_name, texture_path)
+                    if loaded_texture:
+                        return loaded_texture
+                except Exception:
+                    continue
+        
         return None
     
     def contains_point(self, px: float, py: float) -> bool:
@@ -232,17 +262,44 @@ class PlantCard:
         # 绘制植物图标区域
         icon_y = render_y + half_height * 0.2
         icon_size = 20 * self._scale
-        arcade.draw_circle_filled(
-            render_x, icon_y, icon_size,
-            self.color if self.is_available else (80, 80, 80)
-        )
-        # 添加高光
-        if self.is_available:
+        
+        # 如果有纹理，使用纹理渲染
+        if self._texture:
+            # 根据纹理比例调整大小
+            tex_width = self._texture.width
+            tex_height = self._texture.height
+            aspect_ratio = tex_width / tex_height if tex_height != 0 else 1
+            
+            # 计算适当的尺寸以适应图标区域
+            display_width = min(icon_size * 2, tex_width * 0.8)
+            display_height = min(icon_size * 2, tex_height * 0.8)
+            
+            # 如果宽高比不是1:1，调整尺寸
+            if abs(aspect_ratio - 1) > 0.1:
+                if aspect_ratio > 1:  # 宽图
+                    display_height = display_width / aspect_ratio
+                else:  # 高图
+                    display_width = display_height * aspect_ratio
+            
+            # Calculate the rectangle dimensions
+            rect_width = min(display_width, tex_width)
+            rect_height = min(display_height, tex_height)
+            
+            rect = arcade.XYWH(render_x, icon_y, rect_width, rect_height)
+            arcade.draw_texture_rect(self._texture, rect)
+        else:
+            # 否则使用原来的圆形渲染
             arcade.draw_circle_filled(
-                render_x - icon_size * 0.3, icon_y + icon_size * 0.3,
-                icon_size * 0.3,
-                (min(255, self.color[0] + 50), min(255, self.color[1] + 50), min(255, self.color[2] + 50))
+                render_x, icon_y, icon_size,
+                self.color if self.is_available else (80, 80, 80)
             )
+            # 添加高光
+            if self.is_available:
+                arcade.draw_circle_filled(
+                    render_x - icon_size * 0.3, icon_y + icon_size * 0.3,
+                    icon_size * 0.3,
+                    (min(255, self.color[0] + 50), min(255, self.color[1] + 50), min(255, self.color[2] + 50))
+                )
         
         # 绘制植物名称（简化显示）
         name_y = render_y + half_height - 12 * self._scale

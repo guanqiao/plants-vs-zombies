@@ -20,6 +20,7 @@ from .zombie_animation_renderer import ZombieAnimationRenderer, ZombieBodyPart
 from .zombie_visual_system import ZombieVisualSystem, DeathType
 from .special_zombie_effects import SpecialZombieEffects
 from .zombie_effects import ZombieEffects, ZombieExpression, get_zombie_effects
+from .zombie_lod_system import get_zombie_lod_system
 from ..core.logger import get_module_logger
 
 
@@ -38,6 +39,7 @@ class ZombieRenderIntegration:
         self._visual_system = ZombieVisualSystem()
         self._special_effects = SpecialZombieEffects()
         self._effects = get_zombie_effects()
+        self._lod_system = get_zombie_lod_system()
         self._time = 0.0
     
     def update(self, dt: float, component_manager: ComponentManager) -> None:
@@ -66,6 +68,13 @@ class ZombieRenderIntegration:
         if not transform or not zombie:
             return
         
+        # 更新LOD系统
+        self._lod_system.update(dt, zombie_id, transform.x, transform.y)
+        
+        # 根据LOD决定是否更新动画
+        if not self._lod_system.should_update_animation(zombie_id):
+            return
+        
         # 判断是否移动和攻击
         is_moving = not zombie.is_attacking
         is_attacking = zombie.is_attacking
@@ -80,11 +89,11 @@ class ZombieRenderIntegration:
             dt, zombie_id, is_moving, is_attacking, is_hurt
         )
         
-        # 更新特效系统
+        # 更新特效系统（根据LOD决定是否更新）
         speed = 30.0 if is_moving else 0.0
         self._effects.update(
             dt, zombie_id, transform.x, transform.y,
-            is_moving=is_moving,
+            is_moving=is_moving and self._lod_system.should_render_dust(zombie_id),
             is_eating=is_attacking,
             is_hurt=is_hurt,
             is_jumping=self._special_effects.is_pole_vaulting(zombie_id),
@@ -119,6 +128,10 @@ class ZombieRenderIntegration:
     
     def render(self, zombie_id: int, component_manager: ComponentManager) -> None:
         """渲染单个僵尸（在现有渲染系统之后调用）"""
+        # 根据LOD决定是否渲染
+        if not self._lod_system.should_render(zombie_id):
+            return
+        
         transform = component_manager.get_component(zombie_id, TransformComponent)
         sprite = component_manager.get_component(zombie_id, SpriteComponent)
         zombie = component_manager.get_component(zombie_id, ZombieComponent)
@@ -153,13 +166,17 @@ class ZombieRenderIntegration:
             pogo_offset, _ = self._special_effects.get_pogo_offset(0, 0)
             final_y += pogo_offset
         
-        # 1. 先渲染阴影
-        self._effects.render_shadow(zombie_id, final_x, final_y, sprite.width)
+        # 1. 先渲染阴影（根据LOD决定）
+        if self._lod_system.should_render_shadow(zombie_id):
+            self._effects.render_shadow(zombie_id, final_x, final_y, sprite.width)
         
-        # 2. 渲染尘土
-        self._effects.render_dust(zombie_id)
+        # 2. 渲染尘土（根据LOD决定）
+        if self._lod_system.should_render_dust(zombie_id):
+            self._effects.render_dust(zombie_id)
         
-        # 3. 渲染僵尸身体（使用程序化动画）
+        # 3. 渲染僵尸身体（使用程序化动画，根据LOD决定是否简化）
+        simplify = self._lod_system.should_simplify_body(zombie_id)
+        # TODO: 实现简化渲染
         self._anim_renderer.render(
             zombie_id, final_x, final_y,
             render_color,
@@ -168,13 +185,14 @@ class ZombieRenderIntegration:
             is_flipped_x=anim_comp.is_flipped_x if anim_comp else True
         )
         
-        # 4. 渲染表情
-        head_y = final_y + sprite.height * 0.35
-        self._effects.render_expression(
-            zombie_id, final_x, head_y,
-            sprite.width * 0.6, sprite.height * 0.4,
-            is_flipped=anim_comp.is_flipped_x if anim_comp else True
-        )
+        # 4. 渲染表情（根据LOD决定）
+        if self._lod_system.should_render_expression(zombie_id):
+            head_y = final_y + sprite.height * 0.35
+            self._effects.render_expression(
+                zombie_id, final_x, head_y,
+                sprite.width * 0.6, sprite.height * 0.4,
+                is_flipped=anim_comp.is_flipped_x if anim_comp else True
+            )
         
         # 5. 渲染特殊僵尸效果
         self._render_special_effects(zombie_id, final_x, final_y, sprite.height, 
@@ -290,6 +308,7 @@ class ZombieRenderIntegration:
         self._anim_renderer.reset(zombie_id)
         self._special_effects.remove_zombie(zombie_id)
         self._effects.remove_zombie(zombie_id)
+        self._lod_system.remove_zombie(zombie_id)
     
     def clear(self) -> None:
         """清除所有效果"""
@@ -297,6 +316,7 @@ class ZombieRenderIntegration:
         self._anim_renderer.clear()
         self._special_effects.clear()
         self._effects.clear()
+        self._lod_system.clear()
         self._time = 0.0
 
 

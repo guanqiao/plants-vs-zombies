@@ -142,8 +142,10 @@ class DancerSummonEffect:
                     tile_y = y + j * tile_size
                     color_idx = (i + j + int(self.summon_progress * 20)) % 4
                     alpha = int(150 * (0.5 - self.summon_progress) * 2)
-                    arcade.draw_rectangle_filled(
-                        tile_x, tile_y, tile_size - 2, tile_size - 2,
+                    half_size = (tile_size - 2) / 2
+                    arcade.draw_lrbt_rectangle_filled(
+                        tile_x - half_size, tile_x + half_size,
+                        tile_y - half_size, tile_y + half_size,
                         (*colors[color_idx][:3], alpha)
                     )
 

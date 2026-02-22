@@ -12,6 +12,7 @@ from .special_zombie_effects import SpecialZombieEffects
 from .zombie_render_system import ZombieRenderSystem
 from .zombie_effects import ZombieEffects, ZombieExpression, get_zombie_effects
 from .zombie_render_integration import ZombieRenderIntegration, get_zombie_render_integration
+from .zombie_lod_system import ZombieLODSystem, LODLevel, LODConfig, get_zombie_lod_system
 
 __all__ = [
     'GameWindow',
@@ -27,4 +28,8 @@ __all__ = [
     'get_zombie_effects',
     'ZombieRenderIntegration',
     'get_zombie_render_integration',
+    'ZombieLODSystem',
+    'LODLevel',
+    'LODConfig',
+    'get_zombie_lod_system',
 ]

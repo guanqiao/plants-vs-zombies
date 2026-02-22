@@ -1,6 +1,6 @@
 {
-  "version": "2.0",
-  "description": "精灵表配置文件 - 对标原版PVZ风格",
+  "version": "4.0",
+  "description": "精灵表配置文件 - 完整版",
   "sprite_sheets": {
     "peashooter": {
       "idle": {
@@ -31,6 +31,15 @@
         "frame_height": 90,
         "fps": 8,
         "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/plants/sunflower_attack_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 10,
+        "loop": false,
         "columns": 4
       }
     },
@@ -150,6 +159,207 @@
         "frames": 4,
         "frame_width": 80,
         "frame_height": 110,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      }
+    },
+    "repeater": {
+      "idle": {
+        "sheet_path": "images/plants/repeater_idle_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/plants/repeater_attack_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 12,
+        "loop": false,
+        "columns": 4,
+        "event_frame": 1
+      }
+    },
+    "chomper": {
+      "idle": {
+        "sheet_path": "images/plants/chomper_idle_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 8,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/plants/chomper_attack_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 10,
+        "loop": false,
+        "columns": 4
+      }
+    },
+    "threepeater": {
+      "idle": {
+        "sheet_path": "images/plants/threepeater_idle_sheet.png",
+        "frames": 4,
+        "frame_width": 80,
+        "frame_height": 90,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/plants/threepeater_attack_sheet.png",
+        "frames": 6,
+        "frame_width": 80,
+        "frame_height": 90,
+        "fps": 12,
+        "loop": false,
+        "columns": 4
+      }
+    },
+    "zombie_flag": {
+      "walk": {
+        "sheet_path": "images/zombies/zombie_flag_walk_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 12,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/zombies/zombie_flag_attack_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      }
+    },
+    "zombie_football": {
+      "walk": {
+        "sheet_path": "images/zombies/zombie_football_walk_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 14,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/zombies/zombie_football_attack_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 12,
+        "loop": true,
+        "columns": 4
+      }
+    },
+    "melon_pult": {
+      "idle": {
+        "sheet_path": "images/plants/melon_pult_idle_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 8,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/plants/melon_pult_attack_sheet.png",
+        "frames": 5,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 10,
+        "loop": false,
+        "columns": 4,
+        "event_frame": 2
+      }
+    },
+    "winter_melon": {
+      "idle": {
+        "sheet_path": "images/plants/winter_melon_idle_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 8,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/plants/winter_melon_attack_sheet.png",
+        "frames": 5,
+        "frame_width": 70,
+        "frame_height": 90,
+        "fps": 10,
+        "loop": false,
+        "columns": 4,
+        "event_frame": 2
+      }
+    },
+    "zombie_newspaper": {
+      "walk": {
+        "sheet_path": "images/zombies/zombie_newspaper_walk_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 12,
+        "loop": true,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/zombies/zombie_newspaper_attack_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 10,
+        "loop": true,
+        "columns": 4
+      },
+      "rage": {
+        "sheet_path": "images/zombies/zombie_newspaper_rage_sheet.png",
+        "frames": 5,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 15,
+        "loop": false,
+        "columns": 4
+      }
+    },
+    "zombie_pole": {
+      "walk": {
+        "sheet_path": "images/zombies/zombie_pole_walk_sheet.png",
+        "frames": 6,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 12,
+        "loop": true,
+        "columns": 4
+      },
+      "jump": {
+        "sheet_path": "images/zombies/zombie_pole_jump_sheet.png",
+        "frames": 5,
+        "frame_width": 70,
+        "frame_height": 100,
+        "fps": 15,
+        "loop": false,
+        "columns": 4
+      },
+      "attack": {
+        "sheet_path": "images/zombies/zombie_pole_attack_sheet.png",
+        "frames": 4,
+        "frame_width": 70,
+        "frame_height": 100,
         "fps": 10,
         "loop": true,
         "columns": 4

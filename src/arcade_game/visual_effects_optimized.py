@@ -330,6 +330,10 @@ class OptimizedVisualEffectsSystem:
         self.effects.append(effect)
         return effect
     
+    def create_planting_visual(self, x: float, y: float) -> PlantingRingEffect:
+        """创建种植视觉效果（兼容方法）"""
+        return self.create_planting_ring(x, y)
+    
     def create_portal(self, x: float, y: float,
                      max_radius: float = 50.0,
                      color: Tuple[int, int, int] = (150, 100, 200),

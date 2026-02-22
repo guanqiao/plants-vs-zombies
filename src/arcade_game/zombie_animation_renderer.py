@@ -47,14 +47,14 @@ class ProceduralAnimationState:
     """程序化动画状态"""
     # 行走动画参数
     walk_cycle_time: float = 0.0
-    walk_speed: float = 8.0  # 行走循环速度
+    walk_speed: float = 2.5  # 行走循环速度
     
     # 身体摆动
-    body_bob_amount: float = 3.0  # 身体上下摆动幅度
-    body_sway_amount: float = 2.0  # 身体左右摆动幅度
+    body_bob_amount: float = 1.8  # 身体上下摆动幅度
+    body_sway_amount: float = 1.0  # 身体左右摆动幅度
     
     # 手臂摆动
-    arm_swing_amount: float = 20.0  # 手臂摆动角度
+    arm_swing_amount: float = 10.0  # 手臂摆动角度
     
     # 当前变换
     body_offset_y: float = 0.0
@@ -110,7 +110,7 @@ class ZombieAnimationRenderer:
         walk_phase = state.walk_cycle_time % (2 * math.pi)
         
         # 身体上下摆动（正弦波）
-        state.body_offset_y = math.sin(walk_phase * 2) * state.body_bob_amount
+        state.body_offset_y = math.sin(walk_phase) * state.body_bob_amount
         
         # 身体轻微左右摆动
         state.body_rotation = math.sin(walk_phase) * state.body_sway_amount * 0.3
@@ -118,8 +118,8 @@ class ZombieAnimationRenderer:
         # 手臂摆动（与身体相反）
         if is_attacking:
             # 攻击时手臂前伸
-            state.left_arm_angle = -30 + math.sin(self._time * 15) * 10
-            state.right_arm_angle = -30 + math.sin(self._time * 15 + math.pi) * 10
+            state.left_arm_angle = -30 + math.sin(self._time * 2.5) * 8
+            state.right_arm_angle = -30 + math.sin(self._time * 2.5 + math.pi) * 8
         else:
             # 行走时手臂自然摆动
             swing = math.sin(walk_phase) * state.arm_swing_amount

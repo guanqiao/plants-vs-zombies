@@ -50,6 +50,10 @@ class RenderSystem(System):
         Args:
             component_manager: 组件管理器
         """
+        # 开始3D效果批量渲染
+        if self._three_d_effects and hasattr(self._three_d_effects, 'begin_batch'):
+            self._three_d_effects.begin_batch()
+        
         # 获取所有需要渲染的实体并按z_index排序
         entities = self._get_sorted_entities(component_manager)
         
@@ -66,6 +70,10 @@ class RenderSystem(System):
             
             if transform and sprite:
                 self._draw_entity(transform, sprite, anim_comp, entity_id)
+        
+        # 结束3D效果批量渲染
+        if self._three_d_effects and hasattr(self._three_d_effects, 'end_batch'):
+            self._three_d_effects.end_batch()
     
     def _get_sorted_entities(self, component_manager: ComponentManager) -> list:
         """

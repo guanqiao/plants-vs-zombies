@@ -814,7 +814,16 @@ class PlantCardRenderer:
     def _draw_plant_icon(self, x: float, y: float, plant_type: str, scale: float) -> None:
         """绘制植物图标（优先使用真实精灵图片）"""
         # 尝试获取真实纹理
-        texture = self.sprite_manager.get_texture(f"card_{plant_type}")
+        # 首先尝试使用具体的植物名称
+        texture = self.sprite_manager.get_texture(f"{plant_type}_idle")
+        if not texture:
+            # 如果没有找到特定的idle纹理，则尝试其他可能的命名
+            texture = self.sprite_manager.get_texture(f"{plant_type}_idle_sheet")
+        if not texture:
+            texture = self.sprite_manager.get_texture(f"{plant_type}")
+        if not texture:
+            # 尝试使用card_前缀（原有逻辑）
+            texture = self.sprite_manager.get_texture(f"card_{plant_type}")
         
         if texture:
             # 使用真实精灵图片

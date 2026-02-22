@@ -174,7 +174,7 @@ class SpriteManager:
         self._textures: Dict[str, arcade.Texture] = {}
         self._animations: Dict[str, Animation] = {}
         self._sprite_sheets: Dict[str, SpriteSheet] = {}
-        self._resource_path = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "sprites")
+        self._resource_path = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "images")
         self._texture_access_order: List[str] = []  # 记录纹理访问顺序用于LRU清理
     
     def load_texture(self, name: str, path: str) -> Optional[arcade.Texture]:

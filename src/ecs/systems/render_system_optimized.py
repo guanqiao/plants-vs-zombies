@@ -54,6 +54,10 @@ class OptimizedRenderSystem(System):
     
     def render(self, component_manager: ComponentManager) -> None:
         """执行批量渲染"""
+        # 开始3D效果批量渲染
+        if self._three_d_effects and hasattr(self._three_d_effects, 'begin_batch'):
+            self._three_d_effects.begin_batch()
+        
         # 检查是否需要重建
         current_entities = set(component_manager.query(TransformComponent, SpriteComponent))
         
@@ -61,8 +65,8 @@ class OptimizedRenderSystem(System):
             self._rebuild_sprite_lists(component_manager)
             self._needs_rebuild = False
         
-        # 更新所有精灵的位置和状态
-        self._update_sprites(component_manager)
+        # 更新所有精灵的位置和状态，应用3D效果
+        self._update_sprites_with_3d(component_manager)
         
         # 批量渲染所有层
         for z_index in sorted(self._sprite_lists.keys()):
@@ -70,6 +74,10 @@ class OptimizedRenderSystem(System):
             if len(sprite_list) > 0:
                 sprite_list.draw()
                 log_draw_call(1)  # 记录批量绘制调用
+        
+        # 结束3D效果批量渲染
+        if self._three_d_effects and hasattr(self._three_d_effects, 'end_batch'):
+            self._three_d_effects.end_batch()
     
     def _rebuild_sprite_lists(self, component_manager: ComponentManager) -> None:
         """重建所有SpriteList"""
@@ -150,29 +158,63 @@ class OptimizedRenderSystem(System):
             logger.error(f"创建精灵失败 (entity {entity_id}): {e}")
             return None
     
-    def _update_sprites(self, component_manager: ComponentManager) -> None:
-        """更新所有精灵的位置和状态"""
+    def _update_sprites_with_3d(self, component_manager: ComponentManager) -> None:
+        """更新所有精灵的位置和状态，应用3D效果"""
         for entity_id, (transform, sprite_comp, anim_comp) in self._entity_components.items():
             sprite = self._entity_sprites.get(entity_id)
             if not sprite:
                 continue
             
-            # 更新位置
-            sprite.center_x = transform.x
-            sprite.center_y = transform.y
+            # 基础参数
+            base_x = transform.x
+            base_y = transform.y
+            base_scale = anim_comp.scale if anim_comp else 1.0
+            base_width = sprite_comp.width * base_scale
+            base_height = sprite_comp.height * base_scale
+            
+            # 应用3D效果
+            adjusted_x = base_x
+            adjusted_y = base_y
+            final_scale = base_scale
+            
+            if self._three_d_effects:
+                adjusted_x, adjusted_y, perspective_scale = self._three_d_effects.draw_3d_effects(
+                    entity_id, base_x, base_y,
+                    base_width, base_height,
+                    screen_height=600,
+                    enable_shadow=True,
+                    enable_highlight=True,
+                    enable_edge=False,
+                    enable_float=True
+                )
+                final_scale = perspective_scale * base_scale
+                
+                # 应用后处理效果（高光）
+                self._three_d_effects.apply_post_effects(
+                    entity_id, adjusted_x, adjusted_y,
+                    sprite_comp.width * final_scale, 
+                    sprite_comp.height * final_scale,
+                    enable_highlight=True,
+                    enable_edge=False
+                )
+            
+            # 更新精灵位置和缩放
+            sprite.center_x = adjusted_x
+            sprite.center_y = adjusted_y
+            sprite.scale = final_scale
             
             # 更新动画纹理
             if anim_comp:
                 texture = anim_comp.get_current_texture()
                 if texture and sprite.texture != texture:
                     sprite.texture = texture
-                
-                # 更新缩放
-                if anim_comp.scale != 1.0:
-                    sprite.scale = anim_comp.scale
             
             # 更新透明度
             sprite.alpha = sprite_comp.alpha
+    
+    def _update_sprites(self, component_manager: ComponentManager) -> None:
+        """更新所有精灵的位置和状态（旧方法，保留兼容性）"""
+        self._update_sprites_with_3d(component_manager)
     
     def mark_dirty(self) -> None:
         """标记需要重建"""
